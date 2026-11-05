@@ -73,8 +73,13 @@ Server side and tooling (v0.2, scaffolded):
   OS permission is requested after the first finished session. An in-app inbox shows changelog,
   legal updates and announcements with an unread badge on Home.
 
-Still open: native builds with RevenueCat, re-consent enforcement for new AGB versions, Sentry and
-PostHog, Playwright smoke tests, and store releases.
+- **Versioned consent**: the API serves the current legal texts and records consents per
+  (user, document, version); a new AGB or Datenschutz version published with the re-consent flag
+  blocks the signed-in app until accepted, the onboarding consent is carried over when versions
+  match, and the legal pages show the served version.
+
+Still open: Sentry and PostHog, Playwright smoke tests, store configuration (RevenueCat products,
+signing) and store releases.
 
 ## Repo layout
 

@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ConsentRouteImport } from './routes/consent'
 import { Route as FaqRouteImport } from './routes/faq'
 import { Route as InboxRouteImport } from './routes/inbox'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
@@ -32,6 +33,11 @@ import { Route as KarteikartenListsListIdRouteImport } from './routes/karteikart
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConsentRoute = ConsentRouteImport.update({
+  id: '/consent',
+  path: '/consent',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FaqRoute = FaqRouteImport.update({
@@ -127,6 +133,7 @@ const KarteikartenListsListIdRoute = KarteikartenListsListIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/consent': typeof ConsentRoute
   '/faq': typeof FaqRoute
   '/inbox': typeof InboxRoute
   '/onboarding': typeof OnboardingRoute
@@ -148,6 +155,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/consent': typeof ConsentRoute
   '/faq': typeof FaqRoute
   '/inbox': typeof InboxRoute
   '/onboarding': typeof OnboardingRoute
@@ -170,6 +178,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/consent': typeof ConsentRoute
   '/faq': typeof FaqRoute
   '/inbox': typeof InboxRoute
   '/onboarding': typeof OnboardingRoute
@@ -193,6 +202,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/consent'
     | '/faq'
     | '/inbox'
     | '/onboarding'
@@ -214,6 +224,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/consent'
     | '/faq'
     | '/inbox'
     | '/onboarding'
@@ -235,6 +246,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/consent'
     | '/faq'
     | '/inbox'
     | '/onboarding'
@@ -257,6 +269,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ConsentRoute: typeof ConsentRoute
   FaqRoute: typeof FaqRoute
   InboxRoute: typeof InboxRoute
   OnboardingRoute: typeof OnboardingRoute
@@ -284,6 +297,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/consent': {
+      id: '/consent'
+      path: '/consent'
+      fullPath: '/consent'
+      preLoaderRoute: typeof ConsentRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/faq': {
@@ -417,6 +437,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ConsentRoute: ConsentRoute,
   FaqRoute: FaqRoute,
   InboxRoute: InboxRoute,
   OnboardingRoute: OnboardingRoute,

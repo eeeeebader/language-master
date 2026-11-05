@@ -271,7 +271,10 @@ export const consents = pgTable(
     acceptedAt: timestamp("accepted_at", { withTimezone: true }).notNull().defaultNow(),
     ipHash: text("ip_hash"),
   },
-  (t) => [index("consents_user_idx").on(t.userId)],
+  (t) => [
+    index("consents_user_idx").on(t.userId),
+    uniqueIndex("consents_user_doc_version_uq").on(t.userId, t.document, t.version),
+  ],
 );
 
 export const legalDocuments = pgTable(

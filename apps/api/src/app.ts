@@ -11,6 +11,7 @@ import { adminRoutes } from "./routes/admin";
 import { billingRoutes } from "./routes/billing";
 import { healthRoutes } from "./routes/health";
 import { type Announcement, inboxRoutes } from "./routes/inbox";
+import { consentRoutes, legalRoutes } from "./routes/legal";
 import { packRoutes } from "./routes/packs";
 import { storyRoutes } from "./routes/stories";
 import { syncRoutes } from "./routes/sync";
@@ -46,6 +47,7 @@ export function createApp(db: Db, env: Env, state: AppState) {
   app.route("/health", healthRoutes(db, state));
   app.route("/webhooks", webhookRoutes(db, env));
   app.route("/packs", packRoutes(db));
+  app.route("/legal", legalRoutes(db));
 
   const auth = requireUser(env.SUPABASE_JWT_SECRET);
   app.use("/sync/*", auth);
@@ -55,9 +57,12 @@ export function createApp(db: Db, env: Env, state: AppState) {
   app.use("/admin/*", auth);
   app.use("/billing/*", auth);
   app.use("/inbox", auth);
+  app.use("/account/consents/*", auth);
+  app.use("/account/consents", auth);
 
   app.route("/sync", syncRoutes(db));
   app.route("/account", accountRoutes(db, env));
+  app.route("/account/consents", consentRoutes(db));
   app.route("/billing", billingRoutes(db, env, settings));
   app.route(
     "/inbox",

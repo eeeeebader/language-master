@@ -6,7 +6,8 @@ import { db } from "@/db/db";
 import { learningEventHooks } from "@/db/repo";
 import { useSettings } from "@/hooks/useSettings";
 import { initAudio } from "@/lib/audio-pack";
-import { listenForNativeAuth } from "@/lib/auth";
+import { listenForNativeAuth, onAuthChange } from "@/lib/auth";
+import { checkConsent, onPendingConsent } from "@/lib/consent";
 import { ensurePack } from "@/lib/dict-pack";
 import { setHaptics } from "@/lib/haptics";
 import { rescheduleNotifications } from "@/lib/notifications";
@@ -15,12 +16,28 @@ import { startSyncScheduler } from "@/lib/sync";
 
 export const Route = createRootRoute({ component: Root });
 
-const NO_NAV = ["/onboarding", "/tour", "/karteikarten/session", "/stories/"];
+const NO_NAV = ["/onboarding", "/tour", "/consent", "/karteikarten/session", "/stories/"];
 
 function Root() {
   const settings = useSettings();
   const navigate = useNavigate();
   const path = useRouterState({ select: (s) => s.location.pathname });
+
+  // Versioned consent: a new AGB/Datenschutz version flagged for re-consent blocks the app.
+  useEffect(() => {
+    const run = () => checkConsent().catch(() => undefined);
+    run();
+    const offAuth = onAuthChange((s) => {
+      if (s) run();
+    });
+    const offPending = onPendingConsent((p) => {
+      if (p.length > 0 && window.location.pathname !== "/consent") navigate({ to: "/consent" });
+    });
+    return () => {
+      offAuth();
+      offPending();
+    };
+  }, [navigate]);
 
   // Native: magic links open the app through its URL scheme.
   useEffect(() => listenForNativeAuth(), []);

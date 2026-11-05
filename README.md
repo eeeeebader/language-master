@@ -30,7 +30,8 @@ What works:
   morphology, curated A1 overrides; ~2 600 lemmas plus ~4 000 inflected forms, 1.8 MB) checked
   against a manifest on launch, stored on the device and queried with sql.js; the bundled ~140-entry
   seed is the fallback. Prefix + fuzzy + accent-insensitive search; variant picker on every form;
-  custom entries.
+  custom entries. An optional audio pack (Piper voice, MP3, ~4 600 clips for headwords, forms and
+  lecture texts, 24 MB) is downloaded from settings and played before the device's TTS.
 - **Lectures**: Spanish unit 0 as twelve nodes on an SVG path, rendered from the typed block schema
   (alphabet grid, number table, rule cards, pattern builder, conjugation mini, dialogue, compare,
   constraint visual, quick check, vocab bundle). Soft locks; "Got it" or the quick check marks a node done.

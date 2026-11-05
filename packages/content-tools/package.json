@@ -15,7 +15,8 @@
     "build-pack": "tsx src/cli/build-pack.ts",
     "validate-lectures": "tsx src/cli/validate-lectures.ts",
     "render-audio": "tsx src/cli/render-audio.ts",
-    "export-seed-overrides": "tsx src/cli/export-seed-overrides.ts"
+    "export-seed-overrides": "tsx src/cli/export-seed-overrides.ts",
+    "build-audio-pack": "tsx src/cli/build-audio-pack.ts"
   },
   "dependencies": {
     "@lm/schema": "workspace:*",

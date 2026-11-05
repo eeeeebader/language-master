@@ -1,3 +1,19 @@
+## Audio pack build
+
+Clips are rendered by Piper (`docker/piper`, voice `es_ES-davefx-medium`), converted to 48 kbps mono
+MP3 with ffmpeg and packed into one SQLite file keyed by the exact voiced text. The client extracts
+the rows into IndexedDB and plays a clip before falling back to the device's speech synthesis.
+
+```bash
+docker build -t lm-piper:dev docker/piper && docker run -d -p 127.0.0.1:5005:5000 lm-piper:dev
+PIPER_URL=http://localhost:5005 pnpm build-audio-pack --pack dist/es-de.v2.sqlite \
+  --lectures ../../apps/client/src/data/lectures-es.ts --out dist --version 2
+node ../../infra/scripts/publish-pack.mjs --file dist/es-de.v2.audio.sqlite --manifest dist/es-de.v2.audio.manifest.json --publish
+```
+
+The audio pack shares the dictionary pack's version; the manifest endpoint reports `with_audio`
+and `audio_url` when both are published.
+
 ## Dictionary pack build (two Wiktionary extracts)
 
 The English-Wiktionary Spanish extract has no German translations, so a Spanish→German pack is

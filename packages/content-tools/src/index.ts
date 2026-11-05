@@ -1,3 +1,4 @@
+export * from "./audio-pack";
 export * from "./dict-client";
 export * from "./kaikki";
 export * from "./lectures";

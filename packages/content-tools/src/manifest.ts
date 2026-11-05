@@ -10,6 +10,11 @@ export const PackManifest = z.object({
   sha256: z.string().regex(/^[a-f0-9]{64}$/),
   with_audio: z.boolean(),
   audio_url: z.string().url().optional(),
+  audio_bytes: z.number().int().positive().optional(),
+  audio_sha256: z
+    .string()
+    .regex(/^[a-f0-9]{64}$/)
+    .optional(),
   published_at: z.string().datetime({ offset: true }),
 });
 export type PackManifest = z.infer<typeof PackManifest>;

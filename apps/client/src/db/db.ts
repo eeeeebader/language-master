@@ -37,6 +37,13 @@ export interface StoryRow extends StoryDocument {
 }
 
 /** Downloaded dictionary pack bytes; one row per (target, native). */
+/** One pre-rendered clip, keyed by the exact text it voices. */
+export interface AudioClipRow {
+  key: string;
+  mime: string;
+  bytes: Uint8Array;
+}
+
 export interface PackFileRow {
   key: string;
   version: number;
@@ -61,6 +68,7 @@ export class LanguageMasterDB extends Dexie {
   stories!: EntityTable<StoryRow, "id">;
   storyProgress!: EntityTable<StoryProgressRow, "storyId">;
   packFiles!: EntityTable<PackFileRow, "key">;
+  audioClips!: EntityTable<AudioClipRow, "key">;
 
   constructor(name = "language-master") {
     super(name);
@@ -81,6 +89,7 @@ export class LanguageMasterDB extends Dexie {
       storyProgress: "storyId",
     });
     this.version(2).stores({ packFiles: "key" });
+    this.version(3).stores({ audioClips: "key" });
   }
 }
 

@@ -2,8 +2,10 @@ import { ArrowLeft, CaretRight } from "@phosphor-icons/react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Card, Page, Toggle } from "@/components/ui";
 import { saveSettings } from "@/db/repo";
+import { useAudioState } from "@/hooks/useAudio";
 import { usePackState } from "@/hooks/usePack";
 import { useSettings } from "@/hooks/useSettings";
+import { installAudio, removeAudio } from "@/lib/audio-pack";
 import { ensurePack, removePack } from "@/lib/dict-pack";
 import { t } from "@/lib/i18n";
 
@@ -29,6 +31,8 @@ function Row({
 function Settings() {
   const s = useSettings();
   const pack = usePackState();
+  const audio = useAudioState();
+  const mb = (b?: number) => (b ? `${(b / 1_048_576).toFixed(1)} MB` : "");
   if (!s) return null;
   return (
     <Page
@@ -95,6 +99,46 @@ function Settings() {
                 onClick={() => removePack()}
               >
                 Entfernen
+              </button>
+            )}
+          </div>
+        </div>
+      </Card>
+      <Card className="mb-4">
+        <div className="flex items-center justify-between py-1">
+          <div>
+            <div className="font-medium">Audio (Aussprache)</div>
+            <div className="text-sm text-ink-2">
+              {audio.status === "ready"
+                ? `Audiopaket v${audio.version} · ${audio.clips.toLocaleString("de-DE")} Clips · offline`
+                : audio.status === "downloading"
+                  ? `Lädt … ${Math.round((audio.received / Math.max(1, audio.total)) * 100)} %`
+                  : audio.status === "extracting"
+                    ? `Entpacke … ${audio.done}/${audio.total}`
+                    : audio.status === "error"
+                      ? `Fehler: ${audio.message}`
+                      : audio.available
+                        ? `Optionales Audiopaket verfügbar ${mb(audio.bytes)} – sonst Sprachausgabe des Geräts`
+                        : "Sprachausgabe des Geräts (kein Audiopaket verfügbar)"}
+            </div>
+          </div>
+          <div className="flex gap-1">
+            {audio.status === "ready" ? (
+              <button
+                type="button"
+                className="rounded-chip bg-paper-2 px-3 py-1.5 text-sm"
+                onClick={() => removeAudio()}
+              >
+                Entfernen
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="rounded-chip bg-paper-2 px-3 py-1.5 text-sm"
+                disabled={audio.status !== "none" || !audio.available}
+                onClick={() => installAudio()}
+              >
+                Laden
               </button>
             )}
           </div>

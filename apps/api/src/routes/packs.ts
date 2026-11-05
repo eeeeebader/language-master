@@ -33,6 +33,8 @@ export function packRoutes(db: Db) {
       sha256: base.sha256,
       with_audio: !!audio,
       audio_url: audio?.url,
+      audio_bytes: audio?.bytes,
+      audio_sha256: audio?.sha256,
       published_at: (base.publishedAt as Date).toISOString(),
     });
   });

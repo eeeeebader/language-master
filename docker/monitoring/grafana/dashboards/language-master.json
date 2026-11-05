@@ -1,9 +1,7 @@
 {
   "uid": "language-master",
   "title": "Language Master",
-  "tags": [
-    "language-master"
-  ],
+  "tags": ["language-master"],
   "timezone": "browser",
   "schemaVersion": 39,
   "version": 1,
@@ -59,9 +57,7 @@
       },
       "options": {
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ]
+          "calcs": ["lastNotNull"]
         },
         "colorMode": "background"
       }
@@ -112,9 +108,7 @@
       },
       "options": {
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ]
+          "calcs": ["lastNotNull"]
         },
         "colorMode": "background"
       }
@@ -149,9 +143,7 @@
       },
       "options": {
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ]
+          "calcs": ["lastNotNull"]
         }
       }
     },

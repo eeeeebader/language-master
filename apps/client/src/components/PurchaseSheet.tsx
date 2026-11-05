@@ -6,6 +6,7 @@ import {
   euro,
   isNativeApp,
   type Product,
+  restorePurchases,
   startCheckout,
 } from "@/lib/billing";
 import { Button, Card, Chip, Sheet } from "./ui";
@@ -15,11 +16,13 @@ export function PurchaseSheet({
   onClose,
   billing,
   reason,
+  onPurchased,
 }: {
   open: boolean;
   onClose: () => void;
   billing: Billing;
   reason?: string;
+  onPurchased?: () => void;
 }) {
   const [busy, setBusy] = useState<Product | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -30,8 +33,20 @@ export function PurchaseSheet({
     setError(null);
     const r = await startCheckout(product, amount);
     setBusy(null);
-    if (r.ok) window.location.href = r.url;
-    else setError(CHECKOUT_ERRORS[r.error] ?? r.error);
+    if (r.ok && r.url) window.location.href = r.url;
+    else if (r.ok) {
+      onPurchased?.();
+      onClose();
+    } else setError(CHECKOUT_ERRORS[r.error] ?? r.error);
+  }
+
+  async function restore() {
+    setError(null);
+    const r = await restorePurchases();
+    if (r.ok) {
+      onPurchased?.();
+      setError("Käufe wiederhergestellt.");
+    } else setError(CHECKOUT_ERRORS[r.error] ?? r.error);
   }
 
   return (

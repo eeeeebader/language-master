@@ -335,6 +335,7 @@ function Stories() {
         reason={purchase.reason}
         billing={billing}
         onClose={() => setPurchase({ open: false })}
+        onPurchased={() => setTimeout(refresh, 3000)}
       />
 
       <Sheet open={archivePick} onClose={() => setArchivePick(false)} title="Platz schaffen">

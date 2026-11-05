@@ -4,8 +4,8 @@ dist/
 scratch/
 *.log
 .DS_Store
-apps/client/ios/
-apps/client/android/
+
+
 .env
 .env.*
 !.env.example

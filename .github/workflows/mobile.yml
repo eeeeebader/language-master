@@ -24,6 +24,38 @@ jobs:
           name: client-dist
           path: apps/client/dist
 
+  android-debug:
+    name: Android debug APK (no secrets)
+    needs: web
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: corepack enable && corepack prepare --activate
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@v4
+        with:
+          name: client-dist
+          path: apps/client/dist
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: android-actions/setup-android@v3
+      - name: Capacitor sync
+        working-directory: apps/client
+        run: pnpm exec cap sync android
+      - name: Assemble debug APK
+        working-directory: apps/client/android
+        run: ./gradlew assembleDebug --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: language-master-debug.apk
+          path: apps/client/android/app/build/outputs/apk/debug/app-debug.apk
+
   ios:
     name: iOS → TestFlight
     needs: web

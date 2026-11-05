@@ -29,7 +29,7 @@ function Profile() {
   const activity = useActivityDays() ?? [];
   const wordCount = useLiveQuery(() => db.words.filter((w) => !w.deletedAt).count(), []) ?? 0;
   const navigate = useNavigate();
-  const { billing } = useBilling();
+  const { billing, refresh } = useBilling();
   const [purchase, setPurchase] = useState(false);
 
   async function doExport() {
@@ -118,7 +118,12 @@ function Profile() {
           {billing.is_premium ? "Tokens kaufen · Unterstützen" : "Premium · Tokens · Unterstützen"}
         </Button>
       )}
-      <PurchaseSheet open={purchase} billing={billing} onClose={() => setPurchase(false)} />
+      <PurchaseSheet
+        open={purchase}
+        billing={billing}
+        onClose={() => setPurchase(false)}
+        onPurchased={() => setTimeout(refresh, 3000)}
+      />
 
       <div className="grid gap-2">
         <Button variant="secondary" full onClick={() => navigate({ to: "/settings" })}>

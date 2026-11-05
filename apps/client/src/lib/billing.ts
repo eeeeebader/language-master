@@ -1,5 +1,11 @@
 import { Capacitor } from "@capacitor/core";
-import { API_URL, getAccessToken, isCloudEnabled } from "./auth";
+import { API_URL, getAccessToken, getSession, isCloudEnabled } from "./auth";
+import {
+  configureStore,
+  purchaseStoreProduct,
+  restoreStorePurchases,
+  storeEnabled,
+} from "./revenuecat";
 
 export interface Billing {
   is_premium: boolean;
@@ -67,13 +73,35 @@ export async function fetchBilling(): Promise<Billing> {
 /** Store rules: purchases inside the native apps go through the stores (RevenueCat), not Stripe. */
 export const isNativeApp = Capacitor.isNativePlatform();
 
-export type CheckoutResult = { ok: true; url: string } | { ok: false; error: string };
+export type CheckoutResult =
+  | { ok: true; url: string }
+  | { ok: true; url?: undefined; store: true }
+  | { ok: false; error: string; cancelled?: boolean };
+
+/** Native: store purchase via RevenueCat; the server learns about it through the webhook. */
+async function storeCheckout(product: Product): Promise<CheckoutResult> {
+  if (product === "support") return { ok: false, error: "support_web_only" };
+  const session = await getSession();
+  if (!session) return { ok: false, error: "signed_out" };
+  if (!(await configureStore(session.user.id))) return { ok: false, error: "native" };
+  const r = await purchaseStoreProduct(product);
+  if (r.ok) return { ok: true, store: true };
+  return { ok: false, error: r.cancelled ? "cancelled" : r.error, cancelled: r.cancelled };
+}
+
+export async function restorePurchases(): Promise<CheckoutResult> {
+  const session = await getSession();
+  if (!session) return { ok: false, error: "signed_out" };
+  if (!(await configureStore(session.user.id))) return { ok: false, error: "native" };
+  const r = await restoreStorePurchases();
+  return r.ok ? { ok: true, store: true } : { ok: false, error: r.error };
+}
 
 export async function startCheckout(
   product: Product,
   amountCents?: number,
 ): Promise<CheckoutResult> {
-  if (isNativeApp) return { ok: false, error: "native" };
+  if (isNativeApp) return storeEnabled ? storeCheckout(product) : { ok: false, error: "native" };
   if (!isCloudEnabled) return { ok: false, error: "offline" };
   try {
     const returnUrl = `${window.location.origin}${window.location.pathname}`;

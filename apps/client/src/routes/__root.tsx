@@ -6,6 +6,7 @@ import { db } from "@/db/db";
 import { learningEventHooks } from "@/db/repo";
 import { useSettings } from "@/hooks/useSettings";
 import { initAudio } from "@/lib/audio-pack";
+import { listenForNativeAuth } from "@/lib/auth";
 import { ensurePack } from "@/lib/dict-pack";
 import { setHaptics } from "@/lib/haptics";
 import { rescheduleNotifications } from "@/lib/notifications";
@@ -20,6 +21,9 @@ function Root() {
   const settings = useSettings();
   const navigate = useNavigate();
   const path = useRouterState({ select: (s) => s.location.pathname });
+
+  // Native: magic links open the app through its URL scheme.
+  useEffect(() => listenForNativeAuth(), []);
 
   // Dictionary pack: open the installed one, then check the manifest for updates.
   useEffect(() => {

@@ -130,7 +130,24 @@ pnpm dev:api && pnpm dev
 another Supabase on the same machine, and adds Inbucket on http://localhost:9100 for magic-link
 mails. `LLM_PROVIDER=fake` runs the whole story pipeline deterministically without an API key.
 
-Native shells: `pnpm --filter @lm/client exec cap add ios|android` then `pnpm --filter @lm/client cap:sync`.
+## Native apps
+
+The Capacitor projects live in `apps/client/android` and `apps/client/ios` (committed; regenerate
+icons with `pnpm exec capacitor-assets generate` from `apps/client/assets`). After every web build:
+
+```bash
+pnpm --filter @lm/client build && pnpm --filter @lm/client exec cap sync
+cd apps/client/android && ./gradlew assembleDebug      # needs JDK 21 + Android SDK, or use the Docker build below
+docker run --rm -v "$PWD/apps/client/android:/project" -w /project mingc/android-build-box:latest ./gradlew assembleDebug
+```
+
+iOS builds need Xcode on macOS (`cd apps/client/ios/App && xcodebuild` or the Fastlane lane in
+`.github/workflows/mobile.yml`). The workflow also publishes a debug APK artifact on every tag.
+
+Native specifics: magic links open the app via the `app.languagemaster.client://auth/callback`
+scheme (PKCE), purchases go through RevenueCat with product ids `premium_unlock`,
+`story_tokens_10`, `story_tokens_50` (set `VITE_REVENUECAT_IOS_KEY` / `VITE_REVENUECAT_ANDROID_KEY`
+at build time), and reminders are Capacitor local notifications.
 
 ## Design
 

@@ -143,7 +143,7 @@ function Karteikarten() {
       </div>
 
       {/* Bottom practice button, above the tab bar */}
-      <div className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-30 px-4">
+      <div className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom)+0.75rem)] z-30 px-4">
         <div className="mx-auto max-w-lg">
           <Button
             full

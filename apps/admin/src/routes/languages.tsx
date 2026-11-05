@@ -18,7 +18,40 @@ interface Pair {
 function Languages() {
   const qc = useQueryClient();
   const toast = useToast();
-  const pairs = useQuery({ queryKey: ["languages"], queryFn: () => list<Pair>("languages") });
+  const pairs = useQuery({
+    queryKey: ["languages"],
+    queryFn: async () => {
+      // readiness is derived: newest published pack and count of published lecture slugs per pair
+      const [rows, packs, lectures] = await Promise.all([
+        list<Pair>("languages"),
+        list<{
+          target: string;
+          native: string;
+          version: number;
+          published_at: string | null;
+          with_audio: boolean;
+        }>("dictionary_packs"),
+        list<{ language: string; slug: string; status: string }>("lectures"),
+      ]);
+      return rows.map((r) => {
+        const published = packs.filter(
+          (p) => p.target === r.target && p.native === r.native && p.published_at && !p.with_audio,
+        );
+        const slugs = new Set(
+          lectures
+            .filter((l) => l.language === r.target && l.status === "published")
+            .map((l) => l.slug),
+        );
+        return {
+          ...r,
+          pack_version:
+            r.pack_version ??
+            (published.length ? Math.max(...published.map((p) => p.version)) : null),
+          published_lectures: r.published_lectures ?? slugs.size,
+        };
+      });
+    },
+  });
   const ready = (p: Pair) => p.pack_version !== null && p.published_lectures >= 8;
   const columns: ColumnDef<Pair, unknown>[] = [
     { header: "Paar", cell: ({ row }) => `${row.original.target} → ${row.original.native}` },

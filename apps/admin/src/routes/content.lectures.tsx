@@ -98,7 +98,11 @@ function Lectures() {
                 }}
                 className={`flex w-full items-center justify-between rounded-chip px-3 py-2 text-left text-sm ${selected === r.id ? "bg-ink text-paper" : "hover:bg-paper-2"}`}
               >
-                <span>{r.title}</span>
+                <span>
+                  {r.title ??
+                    (r.content_json as { title?: { de?: string } } | undefined)?.title?.de ??
+                    r.slug}
+                </span>
                 <Badge tone={r.status === "published" ? "sage" : "amber"}>
                   {r.status === "published" ? `v${r.version}` : "draft"}
                 </Badge>

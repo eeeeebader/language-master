@@ -259,6 +259,7 @@ export const mock = {
       updated_at: "2026-11-02T09:00:00Z",
     },
   ],
+  stories: [] as Record<string, unknown>[],
   official_stories: [
     {
       id: "es-official-mercado",

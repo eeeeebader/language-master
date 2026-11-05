@@ -51,3 +51,25 @@ export const GENERATE_ERRORS: Record<string, string> = {
   generation_failed_refunded: "Die Erstellung ist fehlgeschlagen; dein Token wurde gutgeschrieben.",
   maintenance: "Wartung – bitte später noch einmal versuchen.",
 };
+
+/** Published official texts from the server, merged into the local library (bundled ones stay). */
+export async function refreshOfficialStories(language = "es"): Promise<number> {
+  if (!API_URL) return 0;
+  try {
+    const res = await fetch(`${API_URL}/stories/official?language=${language}`, {
+      cache: "no-cache",
+    });
+    if (!res.ok) return 0;
+    const body = (await res.json()) as { stories: StoryDocument[] };
+    let added = 0;
+    for (const doc of body.stories) {
+      const existing = await db.stories.get(doc.id);
+      if (existing) continue;
+      await db.stories.put({ ...doc, archived: false });
+      added++;
+    }
+    return added;
+  } catch {
+    return 0;
+  }
+}

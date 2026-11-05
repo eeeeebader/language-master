@@ -66,3 +66,15 @@ All endpoints require `Authorization: Bearer <supabase access token>` with role 
 Views the API/database workstream should provide for the light Finance/Analytics modules:
 `llm_usage_daily(day, stories, cost_cents)`, `revenue(stripe_cents_30d, iap_cents_30d,
 refunds_cents_30d, tokens_sold_30d, supporters_cents_30d)`, `analytics(dau, wau, funnel, story_success_rate, minutes_by_mode)`.
+
+## Live content
+
+The app ships the Spanish lectures bundled; to edit them in the admin, push them into the
+database once (drafts + publish) with a locally signed admin token from `apps/api/.env`:
+
+```bash
+pnpm --filter @lm/api seed-lectures -- --email <admin e-mail> --publish
+```
+
+Official texts annotated here are published to `stories` (source = official) and the app merges
+them into its library on launch via `GET /stories/official`.

@@ -16,7 +16,7 @@ import { type Announcement, inboxRoutes } from "./routes/inbox";
 import { consentRoutes, legalRoutes } from "./routes/legal";
 import { opsRoutes, recordOpsEvent } from "./routes/ops";
 import { packRoutes } from "./routes/packs";
-import { storyRoutes } from "./routes/stories";
+import { officialStoryRoutes, storyRoutes } from "./routes/stories";
 import { syncRoutes } from "./routes/sync";
 import { webhookRoutes } from "./routes/webhooks";
 import { SettingsStore } from "./settings";
@@ -56,6 +56,8 @@ export function createApp(db: Db, env: Env, state: AppState) {
   app.route("/webhooks", webhookRoutes(db, env));
   app.route("/packs", packRoutes(db));
   app.route("/legal", legalRoutes(db));
+
+  app.route("/stories", officialStoryRoutes(db));
 
   const auth = requireUser(env.SUPABASE_JWT_SECRET);
   app.use("/sync/*", auth);

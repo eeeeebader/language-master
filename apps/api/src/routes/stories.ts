@@ -54,6 +54,30 @@ async function failedLemmas(db: Db, userId: string, language: string) {
   return rows.map((r) => r.lemma);
 }
 
+/** Public: published official texts for a language; the app merges them into its library. */
+export function officialStoryRoutes(db: Db) {
+  const app = new Hono();
+  app.get("/official", async (c) => {
+    const language = c.req.query("language") ?? "es";
+    const rows = await db
+      .select({ id: stories.id, document: stories.documentJson, updatedAt: stories.updatedAt })
+      .from(stories)
+      .where(
+        and(
+          eq(stories.source, "official"),
+          eq(stories.status, "published"),
+          eq(stories.language, language),
+          isNull(stories.deletedAt),
+        ),
+      )
+      .orderBy(desc(stories.updatedAt))
+      .limit(100);
+    c.header("cache-control", "public, max-age=300");
+    return c.json({ stories: rows.map((r) => r.document), fetchedAt: new Date().toISOString() });
+  });
+  return app;
+}
+
 export function storyRoutes(deps: StoriesDeps) {
   const app = new Hono();
 

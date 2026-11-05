@@ -8,7 +8,7 @@ export const Route = createFileRoute("/analytics")({ component: Analytics });
 interface A {
   dau: number;
   wau: number;
-  funnel: { onboarding: number; first_session: number; day7: number };
+  funnel: { onboarded?: number; onboarding?: number; first_session: number; day7: number };
   story_success_rate: number;
   minutes_by_mode: Record<string, number>;
 }
@@ -16,7 +16,9 @@ interface A {
 function Analytics() {
   const a = useQuery({ queryKey: ["analytics"], queryFn: () => single<A>("analytics") });
   const d = a.data;
-  const f = d?.funnel;
+  const f = d?.funnel
+    ? { ...d.funnel, onboarding: d.funnel.onboarding ?? d.funnel.onboarded ?? 0 }
+    : undefined;
   return (
     <Page
       title="Analytics"
@@ -45,13 +47,13 @@ function Analytics() {
                 <div className="flex justify-between text-sm">
                   <span>{l}</span>
                   <span>
-                    {v} · {Math.round((Number(v) / f.onboarding) * 100)} %
+                    {v} · {f.onboarding ? Math.round((Number(v) / f.onboarding) * 100) : 0} %
                   </span>
                 </div>
                 <div className="h-2 rounded-chip bg-paper-2">
                   <div
                     className="h-full rounded-chip bg-sage"
-                    style={{ width: `${(Number(v) / f.onboarding) * 100}%` }}
+                    style={{ width: `${f.onboarding ? (Number(v) / f.onboarding) * 100 : 0}%` }}
                   />
                 </div>
               </div>

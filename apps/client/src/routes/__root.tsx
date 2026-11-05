@@ -12,6 +12,7 @@ import { ensurePack } from "@/lib/dict-pack";
 import { setHaptics } from "@/lib/haptics";
 import { rescheduleNotifications } from "@/lib/notifications";
 import { setMuted } from "@/lib/sound";
+import { refreshOfficialStories } from "@/lib/stories";
 import { startSyncScheduler } from "@/lib/sync";
 import { identify, track } from "@/lib/telemetry";
 
@@ -59,6 +60,7 @@ function Root() {
     (async () => {
       for (const s of OFFICIAL_STORIES)
         if (!(await db.stories.get(s.id))) await db.stories.put({ ...s, archived: false });
+      await refreshOfficialStories();
     })();
   }, []);
 

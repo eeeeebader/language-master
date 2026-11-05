@@ -5,6 +5,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { useState } from "react";
 import { Badge, Button, Card, DataTable, input, Page, Toast, textarea } from "@/components/ui";
 import { apiPost, list } from "@/lib/api";
+import { supabase } from "@/lib/supabase";
 import { fmtDate, useToast } from "@/lib/useToast";
 
 export const Route = createFileRoute("/content/stories")({ component: Stories });
@@ -23,7 +24,13 @@ function Stories() {
   const toast = useToast();
   const rows = useQuery({
     queryKey: ["official_stories"],
-    queryFn: () => list<Row>("official_stories"),
+    // the real table is `stories` (source = official); the mock keeps a separate fixture
+    queryFn: async () =>
+      supabase
+        ? (await list<Row & { source: string; updated_at?: string }>("stories"))
+            .filter((r) => r.source === "official")
+            .map((r) => ({ ...r, published_at: r.published_at ?? r.updated_at ?? null }))
+        : list<Row>("official_stories"),
   });
   const [title, setTitle] = useState("");
   const [theme, setTheme] = useState("daily_shopping");

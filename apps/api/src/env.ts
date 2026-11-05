@@ -8,6 +8,7 @@ const Env = z.object({
   SUPABASE_URL: z.string().optional(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
   NLP_URL: z.string().default("http://localhost:8001"),
+  PIPER_URL: z.string().optional(),
   ANTHROPIC_API_KEY: z.string().optional(),
   OPENAI_API_KEY: z.string().optional(),
   LLM_PROVIDER: z.enum(["anthropic", "openai", "fake"]).optional(),

@@ -1,7 +1,7 @@
 import { serve } from "@hono/node-server";
 import { createApp } from "./app";
 import { startCron } from "./cron";
-import { closeDb, getDb, runMigrations } from "./db";
+import { closeDb, getDb, runMigrations, seedDefaults } from "./db";
 import { loadEnv } from "./env";
 import { log } from "./lib/log";
 import { initSentry } from "./lib/sentry";
@@ -21,6 +21,8 @@ if (initSentry(env.SENTRY_DSN, state.version, env.NODE_ENV)) log.info("sentry en
 if (env.RUN_MIGRATIONS) {
   const applied = await runMigrations(sql);
   log.info("migrations ok", { applied: applied.length });
+  const seeded = await seedDefaults(db);
+  if (seeded) log.info("app_settings defaults seeded", { inserted: seeded });
 }
 state.migrated = true;
 

@@ -93,6 +93,7 @@ export const ACCESS: Record<string, Role[]> = {
   legal: ["admin", "editor"],
   changelog: ["admin", "editor"],
   jobs: ["admin"],
+  ops: ["admin", "editor", "analyst"],
   "content/lectures": ["admin", "editor"],
   "content/dictionary": ["admin", "editor"],
   "content/stories": ["admin", "editor"],

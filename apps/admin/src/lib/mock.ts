@@ -44,6 +44,13 @@ export const mock = {
       consents: [],
     },
   ],
+  entitlements: [] as {
+    user_id: string;
+    is_premium: boolean;
+    story_tokens: number;
+    is_supporter: boolean;
+  }[],
+  consents: [] as { user_id: string; document: string; version: number; accepted_at: string }[],
   app_settings: [
     {
       key: "free_stories_per_day",
@@ -288,6 +295,70 @@ export const mock = {
     minutes_by_mode: { classic: 12, reaction: 31, progressive: 22, forever: 35 },
   },
   feature_flags: [{ key: "stories_v2", percentage: 0, users: [] as string[], enabled: false }],
+  ops: {
+    checked_at: new Date().toISOString(),
+    services: { database: { ok: true, ms: 3 }, nlp: { ok: true, ms: 41 }, piper: null },
+    process: {
+      started_at: new Date(Date.now() - 5 * 3_600_000).toISOString(),
+      uptime_s: 5 * 3600,
+      requests_by_status: { "2xx": 1840, "4xx": 23, "5xx": 1 },
+      routes: [
+        { route: "POST /sync/push", requests: 612, avg_ms: 14 },
+        { route: "GET /sync/pull", requests: 598, avg_ms: 6 },
+        { route: "POST /stories/generate", requests: 41, avg_ms: 31800 },
+      ],
+      sync_push_ms: { samples: 612, p50: 11, p95: 38, p99: 120 },
+      stories: {
+        ok: 38,
+        failed: 2,
+        rejected: 1,
+        error: 0,
+        duration_p50_s: 29.4,
+        duration_p95_s: 44.1,
+      },
+      llm_cost_cents_since_start: 19.4,
+      memory_mb: 142,
+      node: "v22.12.0",
+    },
+    stories: {
+      days: Array.from({ length: 7 }, (_, i) => ({
+        day: new Date(Date.now() - (6 - i) * 86_400_000).toISOString().slice(0, 10),
+        ok: 4 + i,
+        failed: i % 3 === 0 ? 1 : 0,
+      })),
+      success_rate_30d: 0.95,
+    },
+    llm_cost: {
+      days: Array.from({ length: 7 }, (_, i) => ({
+        day: new Date(Date.now() - (6 - i) * 86_400_000).toISOString().slice(0, 10),
+        step: "notes",
+        cents: 2 + i * 0.4,
+        tokens_in: 5000 + i * 300,
+        tokens_out: 6000 + i * 200,
+      })),
+      total_cents_30d: 23.1,
+    },
+    pack_failures: { total_30d: 2, by_kind_reason: { "dictionary/network": 2 }, recent: [] },
+    errors: [
+      {
+        id: "e1",
+        at: new Date().toISOString(),
+        path: "/stories/generate",
+        method: "POST",
+        message: "nlp 503",
+      },
+    ],
+    jobs: [
+      {
+        id: "j1",
+        name: "retention",
+        startedAt: new Date().toISOString(),
+        finishedAt: new Date().toISOString(),
+        status: "ok",
+        summary: {},
+      },
+    ],
+  },
   audit_log: [] as {
     actor: string;
     table: string;

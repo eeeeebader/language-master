@@ -81,6 +81,7 @@ function mockRead(path: string): unknown {
     };
   }
   if (path === "/admin/audit") return mock.audit_log;
+  if (path === "/admin/ops") return mock.ops;
   return null;
 }
 

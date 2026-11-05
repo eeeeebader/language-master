@@ -69,6 +69,7 @@ function Dictionary() {
     },
     { header: "Veröffentlicht", cell: ({ row }) => fmtDate(row.original.published_at) },
     {
+      id: "actions",
       header: "",
       cell: ({ row }) =>
         !row.original.published_at ? (

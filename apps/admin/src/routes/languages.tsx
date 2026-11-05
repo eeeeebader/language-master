@@ -41,6 +41,7 @@ function Languages() {
       ),
     },
     {
+      id: "actions",
       header: "",
       cell: ({ row }) => (
         <Button

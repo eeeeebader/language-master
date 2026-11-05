@@ -19,6 +19,7 @@ import { Route as JobsRouteImport } from './routes/jobs'
 import { Route as LanguagesRouteImport } from './routes/languages'
 import { Route as LegalRouteImport } from './routes/legal'
 import { Route as LimitsRouteImport } from './routes/limits'
+import { Route as OpsRouteImport } from './routes/ops'
 import { Route as UsersRouteImport } from './routes/users'
 import { Route as ContentDictionaryRouteImport } from './routes/content.dictionary'
 import { Route as ContentLecturesRouteImport } from './routes/content.lectures'
@@ -74,6 +75,11 @@ const LimitsRoute = LimitsRouteImport.update({
   path: '/limits',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OpsRoute = OpsRouteImport.update({
+  id: '/ops',
+  path: '/ops',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const UsersRoute = UsersRouteImport.update({
   id: '/users',
   path: '/users',
@@ -106,6 +112,7 @@ export interface FileRoutesByFullPath {
   '/languages': typeof LanguagesRoute
   '/legal': typeof LegalRoute
   '/limits': typeof LimitsRoute
+  '/ops': typeof OpsRoute
   '/users': typeof UsersRoute
   '/content/dictionary': typeof ContentDictionaryRoute
   '/content/lectures': typeof ContentLecturesRoute
@@ -122,6 +129,7 @@ export interface FileRoutesByTo {
   '/languages': typeof LanguagesRoute
   '/legal': typeof LegalRoute
   '/limits': typeof LimitsRoute
+  '/ops': typeof OpsRoute
   '/users': typeof UsersRoute
   '/content/dictionary': typeof ContentDictionaryRoute
   '/content/lectures': typeof ContentLecturesRoute
@@ -139,6 +147,7 @@ export interface FileRoutesById {
   '/languages': typeof LanguagesRoute
   '/legal': typeof LegalRoute
   '/limits': typeof LimitsRoute
+  '/ops': typeof OpsRoute
   '/users': typeof UsersRoute
   '/content/dictionary': typeof ContentDictionaryRoute
   '/content/lectures': typeof ContentLecturesRoute
@@ -157,6 +166,7 @@ export interface FileRouteTypes {
     | '/languages'
     | '/legal'
     | '/limits'
+    | '/ops'
     | '/users'
     | '/content/dictionary'
     | '/content/lectures'
@@ -173,6 +183,7 @@ export interface FileRouteTypes {
     | '/languages'
     | '/legal'
     | '/limits'
+    | '/ops'
     | '/users'
     | '/content/dictionary'
     | '/content/lectures'
@@ -189,6 +200,7 @@ export interface FileRouteTypes {
     | '/languages'
     | '/legal'
     | '/limits'
+    | '/ops'
     | '/users'
     | '/content/dictionary'
     | '/content/lectures'
@@ -206,6 +218,7 @@ export interface RootRouteChildren {
   LanguagesRoute: typeof LanguagesRoute
   LegalRoute: typeof LegalRoute
   LimitsRoute: typeof LimitsRoute
+  OpsRoute: typeof OpsRoute
   UsersRoute: typeof UsersRoute
   ContentDictionaryRoute: typeof ContentDictionaryRoute
   ContentLecturesRoute: typeof ContentLecturesRoute
@@ -284,6 +297,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LimitsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/ops': {
+      id: '/ops'
+      path: '/ops'
+      fullPath: '/ops'
+      preLoaderRoute: typeof OpsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/users': {
       id: '/users'
       path: '/users'
@@ -326,6 +346,7 @@ const rootRouteChildren: RootRouteChildren = {
   LanguagesRoute: LanguagesRoute,
   LegalRoute: LegalRoute,
   LimitsRoute: LimitsRoute,
+  OpsRoute: OpsRoute,
   UsersRoute: UsersRoute,
   ContentDictionaryRoute: ContentDictionaryRoute,
   ContentLecturesRoute: ContentLecturesRoute,

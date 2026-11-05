@@ -46,6 +46,7 @@ function Jobs() {
     { header: "Ende", cell: ({ row }) => fmtDate(row.original.finished_at) },
     { header: "Zusammenfassung", accessorKey: "summary" },
     {
+      id: "actions",
       header: "",
       cell: ({ row }) =>
         row.original.status === "failed" ? (

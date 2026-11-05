@@ -5,7 +5,7 @@ import { logger } from "hono/logger";
 import { createOfficialAnnotator } from "./admin/official";
 import { requireUser } from "./auth";
 import type { Env } from "./env";
-import { httpDuration, registry, routeLabel } from "./lib/metrics";
+import { recordRequest, routeLabel } from "./lib/ops";
 import { GenerationLimiter } from "./lib/rateLimit";
 import { captureException } from "./lib/sentry";
 import { accountRoutes } from "./routes/account";
@@ -14,6 +14,7 @@ import { billingRoutes } from "./routes/billing";
 import { healthRoutes } from "./routes/health";
 import { type Announcement, inboxRoutes } from "./routes/inbox";
 import { consentRoutes, legalRoutes } from "./routes/legal";
+import { opsRoutes, recordOpsEvent } from "./routes/ops";
 import { packRoutes } from "./routes/packs";
 import { storyRoutes } from "./routes/stories";
 import { syncRoutes } from "./routes/sync";
@@ -38,13 +39,9 @@ export function createApp(db: Db, env: Env, state: AppState) {
     logger((line) => console.log(line)),
   );
   app.use("*", async (c, next) => {
-    const end = httpDuration.startTimer();
+    const t0 = performance.now();
     await next();
-    end({ method: c.req.method, route: routeLabel(c.req.path), status: String(c.res.status) });
-  });
-  app.get("/metrics", async (c) => {
-    c.header("content-type", registry.contentType);
-    return c.body(await registry.metrics());
+    recordRequest(c.req.method, routeLabel(c.req.path), c.res.status, performance.now() - t0);
   });
   app.use(
     "*",
@@ -104,11 +101,17 @@ export function createApp(db: Db, env: Env, state: AppState) {
   const annotateOfficial: ReturnType<typeof createOfficialAnnotator> = async (input, now) =>
     createOfficialAnnotator(await llmConfig(), createAnnotator(env.NLP_URL))(input, now);
   app.route("/admin", adminRoutes({ db, settings, annotateOfficial }));
+  app.route("/admin/ops", opsRoutes(db, env));
 
   app.notFound((c) => c.json({ error: "not found" }, 404));
   app.onError((err, c) => {
     console.error(err);
     captureException(err, { path: c.req.path, method: c.req.method });
+    recordOpsEvent(db, "api_error", {
+      path: routeLabel(c.req.path),
+      method: c.req.method,
+      message: String(err).slice(0, 500),
+    }).catch(() => undefined);
     return c.json({ error: "internal" }, 500);
   });
   return app;

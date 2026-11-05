@@ -492,3 +492,15 @@ export const languages = pgTable(
   },
   (t) => [primaryKey({ columns: [t.target, t.native] })],
 );
+
+/** Durable operations events (API errors, pack download failures, service checks). */
+export const opsEvents = pgTable(
+  "ops_events",
+  {
+    id: text("id").primaryKey(),
+    kind: text("kind").notNull(),
+    data: jsonb("data").notNull().default({}),
+    at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("ops_events_kind_at_idx").on(t.kind, t.at)],
+);

@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createDb, type Db } from "@lm/database";
+import { APP_SETTINGS_DEFAULTS, appSettings, createDb, type Db } from "@lm/database";
 import { log } from "./lib/log";
 
 let handle: ReturnType<typeof createDb> | null = null;
@@ -49,4 +49,18 @@ export async function runMigrations(
     }
   });
   return applied;
+}
+
+/** Insert app_settings defaults that are missing, so the admin Limits module always has rows. */
+export async function seedDefaults(db: Db): Promise<number> {
+  let inserted = 0;
+  for (const [key, value] of Object.entries(APP_SETTINGS_DEFAULTS)) {
+    const r = await db
+      .insert(appSettings)
+      .values({ key, valueJson: value as never, version: 1 })
+      .onConflictDoNothing()
+      .returning({ key: appSettings.key });
+    inserted += r.length;
+  }
+  return inserted;
 }

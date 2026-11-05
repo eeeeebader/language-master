@@ -9,6 +9,7 @@ import {
   ListChecks,
   Notebook,
   Path,
+  Pulse,
   Scroll,
   Translate,
   Users,
@@ -28,6 +29,7 @@ const NAV: { to: string; module: string; label: string; Icon: typeof Users; grou
   { to: "/legal", module: "legal", label: "Legal", Icon: Gavel, group: "Betrieb" },
   { to: "/changelog", module: "changelog", label: "Changelog", Icon: Scroll, group: "Betrieb" },
   { to: "/jobs", module: "jobs", label: "Jobs", Icon: ListChecks, group: "Betrieb" },
+  { to: "/ops", module: "ops", label: "Betrieb", Icon: Pulse, group: "Betrieb" },
   {
     to: "/content/lectures",
     module: "content/lectures",

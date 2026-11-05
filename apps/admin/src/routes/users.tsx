@@ -26,7 +26,30 @@ function UsersPage() {
   const toast = useToast();
   const users = useQuery({
     queryKey: ["users", q],
-    queryFn: () => list<User>("users", { search: q, column: "username" }),
+    queryFn: async () => {
+      // entitlements and consents hang off auth.users, not public.users, so they cannot be
+      // embedded through PostgREST; merge them here.
+      const [rows, ents, cons] = await Promise.all([
+        list<User>("users", { search: q, column: "username" }),
+        list<{ user_id: string; is_premium: boolean; story_tokens: number; is_supporter: boolean }>(
+          "entitlements",
+        ),
+        list<{ user_id: string; document: string; version: number; accepted_at: string }>(
+          "consents",
+        ),
+      ]);
+      const entByUser = new Map(ents.map((e) => [e.user_id, e]));
+      return rows.map((u) => {
+        const e = entByUser.get(u.id);
+        return {
+          ...u,
+          is_premium: u.is_premium ?? e?.is_premium ?? false,
+          story_tokens: u.story_tokens ?? e?.story_tokens ?? 0,
+          is_supporter: u.is_supporter ?? e?.is_supporter ?? false,
+          consents: u.consents ?? cons.filter((c) => c.user_id === u.id),
+        };
+      });
+    },
   });
   const refresh = () => qc.invalidateQueries({ queryKey: ["users"] });
 
@@ -88,9 +111,10 @@ function UsersPage() {
     {
       header: "Consents",
       cell: ({ row }) =>
-        row.original.consents.map((c) => `${c.document} v${c.version}`).join(", ") || "–",
+        (row.original.consents ?? []).map((c) => `${c.document} v${c.version}`).join(", ") || "–",
     },
     {
+      id: "actions",
       header: "",
       cell: ({ row }) => (
         <div className="flex gap-1">

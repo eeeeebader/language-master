@@ -2,7 +2,7 @@ import { type Db, dictionaryPacks } from "@lm/database";
 import { and, desc, eq, isNotNull } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
-import { packDownloadFailures, packManifestRequests } from "../lib/metrics";
+import { recordOpsEvent } from "./ops";
 
 /** Public pack manifest: the app checks it on launch and downloads the pack when newer. */
 export function packRoutes(db: Db) {
@@ -23,11 +23,7 @@ export function packRoutes(db: Db) {
       .orderBy(desc(dictionaryPacks.version))
       .limit(2);
     const base = row.find((r) => !r.withAudio) ?? row[0];
-    if (!base) {
-      packManifestRequests.inc({ outcome: "missing" });
-      return c.json({ error: "no pack" }, 404);
-    }
-    packManifestRequests.inc({ outcome: "served" });
+    if (!base) return c.json({ error: "no pack" }, 404);
     // Audio clips are keyed by text, so the newest published audio pack serves any dictionary version.
     const audio = row.find((r) => r.withAudio);
     c.header("cache-control", "public, max-age=60, must-revalidate");
@@ -54,7 +50,7 @@ export function packRoutes(db: Db) {
       })
       .safeParse(await c.req.json().catch(() => null));
     if (!parsed.success) return c.json({ error: "invalid" }, 400);
-    packDownloadFailures.inc(parsed.data);
+    await recordOpsEvent(db, "pack_failure", parsed.data);
     return c.json({ ok: true });
   });
   return app;

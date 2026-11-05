@@ -109,3 +109,20 @@ spaCy `es_core_news_md` ≈ 500 MB RSS with 2 uvicorn workers; Supabase ≈ 2.5 
 tuned by upstream defaults. The CX32 has headroom for Listmonk (v2) and Piper batch renders.
 Scale by moving Supabase to a second box: only `DATABASE_URL`/`SUPABASE_URL` and the external
 network change.
+
+## Monitoring
+
+`docker/docker-compose.monitoring.yml` adds Prometheus (30 d retention), a blackbox exporter that
+probes `api.<domain>/health`, the app shell and the admin every 30 s, Loki + Promtail for container
+logs, and Grafana behind Traefik on `grafana.<domain>` (admin allow-list). Grafana is provisioned
+with three datasources (Prometheus, Loki, Postgres) and one dashboard, `Language Master`:
+uptime, story success rate, LLM cost today and per day (from `llm_usage`), story generations by
+result, sync push latency (p50/p95/p99), pack download failures reported by clients, API latency
+by route, requests by status, generation duration, DAU, tokens sold, and the API error log.
+
+Metrics come from `GET /metrics` on the API (`apps/api/src/lib/metrics.ts`, internal network
+only); business numbers are read from Postgres directly. Alert rules in
+`docker/monitoring/prometheus/alerts.yml`: API down 3 min, app shell down 5 min, story failure
+rate above 20 % for 30 min, sync p95 above 2 s. Wire Alertmanager or Grafana contact points to
+e-mail when going live. Locally: `make monitoring-dev` with `pnpm dev:api` running, then
+http://localhost:3300 (admin / admin).

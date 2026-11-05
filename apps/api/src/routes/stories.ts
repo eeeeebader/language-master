@@ -3,6 +3,7 @@ import { StoryRequest } from "@lm/schema";
 import { and, desc, eq, gte, isNotNull, isNull, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { log } from "../lib/log";
+import { llmCostCents, storyDuration, storyGenerations } from "../lib/metrics";
 import type { GenerationLimiter } from "../lib/rateLimit";
 import { ulid } from "../lib/ulid";
 import type { SettingsStore } from "../settings";
@@ -68,11 +69,13 @@ export function storyRoutes(deps: StoriesDeps) {
     if (!release) return c.json({ error: "rate_limited" }, 429);
 
     const storyId = ulid();
+    const startedAt = Date.now();
     try {
       const freePerDay = await deps.settings.get("stories.free_per_day", 1);
       const reservation = await reserveGeneration(deps.db, user.id, storyId, freePerDay);
       if (!reservation.ok) {
         deps.limiter.refundDaily(user.id);
+        storyGenerations.inc({ result: "rejected" });
         return c.json({ error: reservation.reason }, 402);
       }
       await deps.db.insert(stories).values({
@@ -103,6 +106,7 @@ export function storyRoutes(deps: StoriesDeps) {
       });
 
       const cost = result.usage.reduce((a, u) => a + u.costCents, 0);
+      for (const u of result.usage) llmCostCents.inc({ step: u.step, model: u.model }, u.costCents);
       if (result.usage.length)
         await deps.db.insert(llmUsage).values(
           result.usage.map((u) => ({
@@ -124,6 +128,7 @@ export function storyRoutes(deps: StoriesDeps) {
           .where(eq(stories.id, storyId));
         if (reservation.payment === "token") await refundGeneration(deps.db, user.id, storyId);
         deps.limiter.refundDaily(user.id);
+        storyGenerations.inc({ result: "failed" });
         log.warn("story generation failed", {
           storyId,
           reason: result.reason,
@@ -149,6 +154,8 @@ export function storyRoutes(deps: StoriesDeps) {
           updatedAt: new Date(),
         })
         .where(eq(stories.id, storyId));
+      storyGenerations.inc({ result: "ok" });
+      storyDuration.observe((Date.now() - startedAt) / 1000);
       log.info("story generated", {
         storyId,
         attempts: result.attempts,
@@ -161,6 +168,7 @@ export function storyRoutes(deps: StoriesDeps) {
         coverage: result.coverage,
       });
     } catch (e) {
+      storyGenerations.inc({ result: "error" });
       log.error("story pipeline error", { storyId, error: String(e) });
       await deps.db
         .update(stories)

@@ -5,6 +5,7 @@ import { logger } from "hono/logger";
 import { createOfficialAnnotator } from "./admin/official";
 import { requireUser } from "./auth";
 import type { Env } from "./env";
+import { httpDuration, registry, routeLabel } from "./lib/metrics";
 import { GenerationLimiter } from "./lib/rateLimit";
 import { captureException } from "./lib/sentry";
 import { accountRoutes } from "./routes/account";
@@ -36,6 +37,15 @@ export function createApp(db: Db, env: Env, state: AppState) {
     "*",
     logger((line) => console.log(line)),
   );
+  app.use("*", async (c, next) => {
+    const end = httpDuration.startTimer();
+    await next();
+    end({ method: c.req.method, route: routeLabel(c.req.path), status: String(c.res.status) });
+  });
+  app.get("/metrics", async (c) => {
+    c.header("content-type", registry.contentType);
+    return c.body(await registry.metrics());
+  });
   app.use(
     "*",
     cors({

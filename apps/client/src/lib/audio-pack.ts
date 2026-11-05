@@ -6,7 +6,7 @@ import { audioKey, type PackManifest } from "@lm/content-tools";
 import initSqlJs, { type SqlJsStatic } from "sql.js";
 import sqlWasmUrl from "sql.js/dist/sql-wasm.wasm?url";
 import { db } from "@/db/db";
-import { fetchManifest } from "./dict-pack";
+import { fetchManifest, reportPackFailure } from "./dict-pack";
 
 export type AudioState =
   | { status: "none"; available: boolean; bytes?: number }
@@ -57,8 +57,14 @@ export async function installAudio(target = "es", native = "de"): Promise<void> 
   try {
     const total = m.audio_bytes ?? 0;
     set({ status: "downloading", received: 0, total });
-    const res = await fetch(m.audio_url);
-    if (!res.ok || !res.body) throw new Error(`download failed (${res.status})`);
+    const res = await fetch(m.audio_url).catch(() => {
+      reportPackFailure("audio", "network");
+      throw new Error("download failed (network)");
+    });
+    if (!res.ok || !res.body) {
+      reportPackFailure("audio", "http");
+      throw new Error(`download failed (${res.status})`);
+    }
     const reader = res.body.getReader();
     const chunks: Uint8Array[] = [];
     let received = 0;

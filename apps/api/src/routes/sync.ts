@@ -1,5 +1,6 @@
 import type { Db } from "@lm/database";
 import { Hono } from "hono";
+import { syncEvents, syncPushDuration } from "../lib/metrics";
 import { PushBody } from "../sync/logic";
 import {
   pull,
@@ -19,12 +20,15 @@ export function syncRoutes(db: Db) {
     if (!parsed.success)
       return c.json({ error: "invalid body", issues: parsed.error.issues.slice(0, 5) }, 400);
     const body = parsed.data;
+    const endTimer = syncPushDuration.startTimer();
     const result = await db.transaction(async (tx) => {
       await pushLww(tx, user.id, body);
       const ev = await pushEvents(tx, user.id, body.events);
       await recomputeWords(tx, user.id, ev.affectedWordIds);
       return ev;
     });
+    endTimer();
+    syncEvents.inc(body.events.length);
     await touchLastLogin(db, user.id);
     return c.json({
       acceptedEventIds: result.accepted,

@@ -4,7 +4,7 @@ SUPA := docker compose -f infra/supabase/docker-compose.yml
 STACK := docker compose -f docker/docker-compose.yml --env-file docker/.env
 STACK_DEV := $(STACK) -f docker/docker-compose.dev.yml
 
-.PHONY: help dev keys supabase-up supabase-down supabase-fetch supabase-logs stack-up stack-down stack-dev stack-logs build-images backup restore check
+.PHONY: help dev keys monitoring-up monitoring-down monitoring-dev supabase-up supabase-down supabase-fetch supabase-logs stack-up stack-down stack-dev stack-logs build-images backup restore check
 
 help: ## list targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
@@ -57,3 +57,14 @@ check: ## validate compose files like CI does
 	docker compose -f docker/docker-compose.yml --env-file docker/.env.example config -q
 	docker compose -f docker/docker-compose.yml -f docker/docker-compose.dev.yml --env-file docker/.env.example config -q
 	docker compose -f infra/supabase/docker-compose.yml --env-file infra/supabase/.env.example config -q
+
+MON := docker compose -f docker/docker-compose.yml -f docker/docker-compose.monitoring.yml --env-file docker/.env
+
+monitoring-up: ## start Prometheus, Loki, Promtail, blackbox and Grafana next to the stack
+	$(MON) up -d prometheus blackbox loki promtail grafana
+
+monitoring-down: ## stop the monitoring services
+	$(MON) stop prometheus blackbox loki promtail grafana
+
+monitoring-dev: ## local monitoring against the host API (Grafana on http://localhost:3300)
+	docker compose -p lm-monitoring -f docker/docker-compose.monitoring.yml -f docker/docker-compose.monitoring.dev.yml up -d

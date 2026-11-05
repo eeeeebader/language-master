@@ -89,7 +89,14 @@ Server side and tooling (v0.2, scaffolded):
   reaction-time and progressive sessions, lecture with quick check, reader drawer and vocabulary
   summary, and an offline reload plus session. Run in CI.
 
-Still open: a Grafana dashboard, store configuration (RevenueCat products, signing) and store releases.
+- **Monitoring**: Prometheus metrics from the API (`/metrics`: request latency by route, sync push
+  latency, story generations by result, LLM cost, pack manifest requests and client-reported pack
+  download failures), a blackbox uptime probe, Loki/Promtail logs and a provisioned Grafana
+  dashboard (`docker/docker-compose.monitoring.yml`, `make monitoring-dev` locally on
+  http://localhost:3300). Alert rules for API down, app shell down, story failure rate and slow sync.
+
+Still open: store configuration (RevenueCat products, signing), store releases, and alert delivery
+(Alertmanager or Grafana contact points).
 
 ## Repo layout
 

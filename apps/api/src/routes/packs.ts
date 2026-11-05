@@ -1,6 +1,8 @@
 import { type Db, dictionaryPacks } from "@lm/database";
 import { and, desc, eq, isNotNull } from "drizzle-orm";
 import { Hono } from "hono";
+import { z } from "zod";
+import { packDownloadFailures, packManifestRequests } from "../lib/metrics";
 
 /** Public pack manifest: the app checks it on launch and downloads the pack when newer. */
 export function packRoutes(db: Db) {
@@ -21,7 +23,11 @@ export function packRoutes(db: Db) {
       .orderBy(desc(dictionaryPacks.version))
       .limit(2);
     const base = row.find((r) => !r.withAudio) ?? row[0];
-    if (!base) return c.json({ error: "no pack" }, 404);
+    if (!base) {
+      packManifestRequests.inc({ outcome: "missing" });
+      return c.json({ error: "no pack" }, 404);
+    }
+    packManifestRequests.inc({ outcome: "served" });
     // Audio clips are keyed by text, so the newest published audio pack serves any dictionary version.
     const audio = row.find((r) => r.withAudio);
     c.header("cache-control", "public, max-age=60, must-revalidate");
@@ -38,6 +44,18 @@ export function packRoutes(db: Db) {
       audio_sha256: audio?.sha256,
       published_at: (base.publishedAt as Date).toISOString(),
     });
+  });
+  /** Clients report a failed download or checksum so the dashboard can show it. */
+  app.post("/report", async (c) => {
+    const parsed = z
+      .object({
+        kind: z.enum(["dictionary", "audio"]),
+        reason: z.enum(["network", "http", "checksum", "storage", "open"]),
+      })
+      .safeParse(await c.req.json().catch(() => null));
+    if (!parsed.success) return c.json({ error: "invalid" }, 400);
+    packDownloadFailures.inc(parsed.data);
+    return c.json({ ok: true });
   });
   return app;
 }

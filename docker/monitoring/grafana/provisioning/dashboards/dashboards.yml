@@ -1,0 +1,7 @@
+apiVersion: 1
+providers:
+  - name: language-master
+    folder: Language Master
+    type: file
+    options:
+      path: /var/lib/grafana/dashboards

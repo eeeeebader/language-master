@@ -90,6 +90,20 @@ export async function loadInstalledPack(target = "es", native = "de"): Promise<b
   }
 }
 
+/** Tell the API about a failed download so the dashboard can show it; best effort. */
+export function reportPackFailure(
+  kind: "dictionary" | "audio",
+  reason: "network" | "http" | "checksum" | "storage" | "open",
+) {
+  if (!API_URL) return;
+  fetch(`${API_URL}/packs/report`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ kind, reason }),
+    keepalive: true,
+  }).catch(() => undefined);
+}
+
 export async function fetchManifest(target = "es", native = "de"): Promise<PackManifest | null> {
   if (!API_URL) return null;
   try {
@@ -112,8 +126,14 @@ async function sha256Hex(bytes: Uint8Array): Promise<string> {
 export async function installPack(manifest: PackManifest): Promise<void> {
   set({ status: "downloading", received: 0, total: manifest.bytes });
   try {
-    const res = await fetch(manifest.url);
-    if (!res.ok || !res.body) throw new Error(`download failed (${res.status})`);
+    const res = await fetch(manifest.url).catch(() => {
+      reportPackFailure("dictionary", "network");
+      throw new Error("download failed (network)");
+    });
+    if (!res.ok || !res.body) {
+      reportPackFailure("dictionary", "http");
+      throw new Error(`download failed (${res.status})`);
+    }
     const reader = res.body.getReader();
     const chunks: Uint8Array[] = [];
     let received = 0;
@@ -131,7 +151,10 @@ export async function installPack(manifest: PackManifest): Promise<void> {
       offset += c.length;
     }
     const hash = await sha256Hex(bytes);
-    if (hash !== manifest.sha256) throw new Error("checksum mismatch");
+    if (hash !== manifest.sha256) {
+      reportPackFailure("dictionary", "checksum");
+      throw new Error("checksum mismatch");
+    }
     await db.packFiles.put({
       key: packKey(manifest.target, manifest.native),
       version: manifest.version,

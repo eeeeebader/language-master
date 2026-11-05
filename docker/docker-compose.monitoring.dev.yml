@@ -1,0 +1,30 @@
+# Local development: scrape the API running on the host (pnpm dev:api) and reach the local
+# Supabase pooler; publish Grafana and Prometheus on localhost.
+#   docker compose -f docker/docker-compose.monitoring.yml -f docker/docker-compose.monitoring.dev.yml up -d
+services:
+  prometheus:
+    volumes:
+      - ./monitoring/prometheus/prometheus.dev.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    ports: ["127.0.0.1:9090:9090"]
+  blackbox:
+    extra_hosts: ["host.docker.internal:host-gateway"]
+  grafana:
+    environment:
+      GF_SERVER_ROOT_URL: http://localhost:3300
+      PG_HOST: host.docker.internal
+      PG_PORT: "55432"
+      PG_USER: postgres.language-master
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    ports: ["127.0.0.1:3300:3000"]
+    labels: {}
+  promtail:
+    volumes:
+      - ./monitoring/promtail/promtail.yml:/etc/promtail/promtail.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+networks:
+  edge:
+  internal:
+  supabase:

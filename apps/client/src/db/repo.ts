@@ -170,6 +170,20 @@ export async function addSentence(
   });
 }
 
+export async function removeSentence(id: string) {
+  const row = await db.sentences.get(id);
+  if (!row) return;
+  await db.sentences.delete(id);
+  const rest = (await db.sentences.where("wordId").equals(row.wordId).toArray()).sort(
+    (a, b) => a.position - b.position,
+  );
+  for (const [i, r] of rest.entries()) await db.sentences.update(r.id, { position: i + 1 });
+}
+
+export async function updateSentence(id: string, patch: { text?: string; translation?: string }) {
+  await db.sentences.update(id, patch);
+}
+
 /** Add a dictionary word with chosen variants to a list, with up to 2 dictionary example sentences. */
 export async function addDictionaryWord(
   entry: {

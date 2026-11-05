@@ -1,7 +1,7 @@
 import type { DictionaryEntry, VariantKind } from "@lm/schema";
 import { fuzzyMatch, normaliseAnswer } from "@lm/srs";
 import { DICTIONARY_ES } from "@/data/dictionary-es";
-import { dictClient } from "./dict-pack";
+import { dictClient, packSearchReady, searchPack } from "./dict-pack";
 
 const byId = new Map(DICTIONARY_ES.map((e) => [e.id, e]));
 const byLemma = new Map(DICTIONARY_ES.map((e) => [normaliseAnswer(e.lemma), e]));
@@ -23,6 +23,10 @@ export function dictionarySource(): "pack" | "seed" {
 export function searchDictionary(query: string, limit = 30): DictionaryEntry[] {
   const pack = dictClient();
   if (pack) return pack.search(query, limit);
+  return searchSeed(query, limit);
+}
+
+function searchSeed(query: string, limit: number): DictionaryEntry[] {
   const q = normaliseAnswer(query);
   if (!q)
     return DICTIONARY_ES.slice()
@@ -97,4 +101,10 @@ export function variantOptions(e: DictionaryEntry): VariantOption[] {
     }
   }
   return out;
+}
+
+/** Non-blocking search: the pack is queried on a worker; the bundled seed answers synchronously. */
+export async function searchDictionaryAsync(query: string, limit = 30): Promise<DictionaryEntry[]> {
+  if (packSearchReady()) return searchPack(query, limit);
+  return searchSeed(query, limit);
 }

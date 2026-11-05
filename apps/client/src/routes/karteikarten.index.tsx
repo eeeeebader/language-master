@@ -1,23 +1,14 @@
-import type { SessionMode } from "@lm/schema";
 import { isDue } from "@lm/srs";
 import { CaretRight, Plus, Trash } from "@phosphor-icons/react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useLiveQuery } from "dexie-react-hooks";
 import { useState } from "react";
-import { Button, Card, Chip, Empty, Page } from "@/components/ui";
+import { Button, Card, Empty, Page } from "@/components/ui";
 import { db } from "@/db/db";
 import { createList, softDeleteList } from "@/db/repo";
 import { t } from "@/lib/i18n";
-import type { Direction, Filter } from "@/lib/session-builder";
 
 export const Route = createFileRoute("/karteikarten/")({ component: Karteikarten });
-
-const MODES: { id: SessionMode; tone: "sage" | "rose" | "lavender" | "amber" | "sky" }[] = [
-  { id: "classic", tone: "sage" },
-  { id: "reaction", tone: "amber" },
-  { id: "progressive", tone: "lavender" },
-  { id: "forever", tone: "sky" },
-];
 
 function Karteikarten() {
   const navigate = useNavigate();
@@ -33,21 +24,18 @@ function Karteikarten() {
           .anyOf(lw.map((x) => x.wordId))
           .toArray();
         const states = await db.cardStates.bulkGet(variants.map((v) => v.id));
-        out[l.id] = {
-          words: lw.length,
-          due: variants.filter((_, i) => isDue(states[i], now)).length,
-        };
+        const dueWords = new Set(
+          variants.filter((_, i) => isDue(states[i], now)).map((v) => v.wordId),
+        );
+        out[l.id] = { words: lw.length, due: dueWords.size };
       }
       return out;
     }, []) ?? {};
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [mode, setMode] = useState<SessionMode>("reaction");
-  const [filter, setFilter] = useState<Filter>("all");
-  const [direction, setDirection] = useState<Direction>("t2n");
-  const [sample, setSample] = useState<number>(0);
   const [newTitle, setNewTitle] = useState("");
   const [creating, setCreating] = useState(false);
+  const allSelected = lists.length > 0 && selected.size === lists.length;
 
   const toggle = (id: string) => {
     const n = new Set(selected);
@@ -65,14 +53,6 @@ function Karteikarten() {
     );
     setNewTitle("");
     setCreating(false);
-  }
-
-  const canStart = mode === "forever" || selected.size > 0;
-  function start() {
-    navigate({
-      to: "/karteikarten/session",
-      search: { mode, lists: [...selected].join(","), filter, direction, sample, onboarding: 0 },
-    });
   }
 
   return (
@@ -100,11 +80,22 @@ function Karteikarten() {
         </div>
       )}
 
-      <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-ink-3">
-        {t("cards.lists")}
-      </h2>
+      <div className="mb-2 flex items-center justify-between">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-3">
+          {t("cards.lists")}
+        </h2>
+        {lists.length > 0 && (
+          <button
+            type="button"
+            className="text-sm text-ink-2 underline"
+            onClick={() => setSelected(allSelected ? new Set() : new Set(lists.map((l) => l.id)))}
+          >
+            {allSelected ? t("cards.deselectAll") : t("cards.selectAll")}
+          </button>
+        )}
+      </div>
       {lists.length === 0 && <Empty>{t("cards.noLists")}</Empty>}
-      <div className="mb-6 grid gap-2">
+      <div className="grid gap-2 pb-24">
         {lists.map((l) => {
           const c = counts[l.id] ?? { words: 0, due: 0 };
           const on = selected.has(l.id);
@@ -141,6 +132,7 @@ function Karteikarten() {
                   params={{ listId: l.id }}
                   className="rounded-full p-2 hover:bg-white"
                   onClick={(e) => e.stopPropagation()}
+                  aria-label={l.title}
                 >
                   <CaretRight size={18} />
                 </Link>
@@ -150,62 +142,23 @@ function Karteikarten() {
         })}
       </div>
 
-      <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-ink-3">
-        {t("cards.session")}
-      </h2>
-      <div className="mb-3 grid grid-cols-2 gap-2">
-        {MODES.map((m) => (
-          <Card
-            key={m.id}
-            tone={mode === m.id ? m.tone : undefined}
-            className={mode === m.id ? "border-transparent ring-2 ring-ink/80" : ""}
-            onClick={() => setMode(m.id)}
+      {/* Bottom practice button, above the tab bar */}
+      <div className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-30 px-4">
+        <div className="mx-auto max-w-lg">
+          <Button
+            full
+            size="lg"
+            disabled={selected.size === 0}
+            className="shadow-lg"
+            onClick={() =>
+              navigate({ to: "/karteikarten/practice", search: { lists: [...selected].join(",") } })
+            }
           >
-            <div className="font-bold">{t(`cards.mode.${m.id}` as "cards.mode.classic")}</div>
-            <div className="text-xs text-ink-2">
-              {t(`cards.mode.${m.id}.hint` as "cards.mode.classic.hint")}
-            </div>
-          </Card>
-        ))}
-      </div>
-
-      <div className="mb-3">
-        <div className="mb-1 text-sm text-ink-2">{t("cards.filter")}</div>
-        <div className="flex flex-wrap gap-2">
-          {(["all", "due", "failed", "new"] as Filter[]).map((f) => (
-            <Chip key={f} active={filter === f} onClick={() => setFilter(f)}>
-              {t(`cards.filter.${f}` as "cards.filter.all")}
-            </Chip>
-          ))}
+            {t("cards.practice")}
+            {selected.size > 0 && ` · ${selected.size} ${selected.size === 1 ? "Liste" : "Listen"}`}
+          </Button>
         </div>
       </div>
-      <div className="mb-3">
-        <div className="mb-1 text-sm text-ink-2">{t("cards.direction")}</div>
-        <div className="flex gap-2">
-          <Chip active={direction === "t2n"} onClick={() => setDirection("t2n")}>
-            {t("cards.direction.t2n")}
-          </Chip>
-          <Chip active={direction === "n2t"} onClick={() => setDirection("n2t")}>
-            {t("cards.direction.n2t")}
-          </Chip>
-        </div>
-      </div>
-      {mode !== "forever" && (
-        <div className="mb-5">
-          <div className="mb-1 text-sm text-ink-2">{t("cards.sample")}</div>
-          <div className="flex gap-2">
-            {[0, 10, 20, 50].map((n) => (
-              <Chip key={n} active={sample === n} onClick={() => setSample(n)}>
-                {n === 0 ? t("cards.sampleAll") : n}
-              </Chip>
-            ))}
-          </div>
-        </div>
-      )}
-      {!canStart && <p className="mb-2 text-sm text-ink-3">{t("cards.selectLists")}</p>}
-      <Button full size="lg" disabled={!canStart} onClick={start}>
-        {t("common.start")}
-      </Button>
     </Page>
   );
 }

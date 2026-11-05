@@ -1,14 +1,14 @@
 import type { DictionaryEntry } from "@lm/schema";
 import { CaretRight, Plus } from "@phosphor-icons/react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ListPicker } from "@/components/ListPicker";
 import { Button, Card, Empty, Page, Sheet } from "@/components/ui";
 import { VariantPicker } from "@/components/VariantPicker";
 import { DICTIONARY_VERSION } from "@/data/dictionary-es";
 import { addToList, ensureVariant, ensureWord } from "@/db/repo";
 import { usePackState } from "@/hooks/usePack";
-import { searchDictionary } from "@/lib/dictionary";
+import { searchDictionaryAsync } from "@/lib/dictionary";
 import { t } from "@/lib/i18n";
 import { play } from "@/lib/sound";
 
@@ -32,8 +32,26 @@ const POS_DE: Record<string, string> = {
 function Dictionary() {
   const [q, setQ] = useState("");
   const pack = usePackState();
-  // biome-ignore lint/correctness/useExhaustiveDependencies: results change when the pack loads
-  const results = useMemo(() => searchDictionary(q), [q, pack.status]);
+  const [results, setResults] = useState<DictionaryEntry[]>([]);
+  const [searching, setSearching] = useState(false);
+  const seq = useRef(0);
+  // Debounced, off-thread search; answers that arrive out of order are dropped.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: re-run when the pack becomes ready
+  useEffect(() => {
+    const id = ++seq.current;
+    setSearching(true);
+    const tm = setTimeout(
+      async () => {
+        const r = await searchDictionaryAsync(q);
+        if (id === seq.current) {
+          setResults(r);
+          setSearching(false);
+        }
+      },
+      q ? 120 : 0,
+    );
+    return () => clearTimeout(tm);
+  }, [q, pack.status]);
   const [picking, setPicking] = useState<DictionaryEntry | null>(null);
   const [custom, setCustom] = useState(false);
   const [front, setFront] = useState("");
@@ -82,7 +100,7 @@ function Dictionary() {
         className="mb-4 w-full rounded-card border border-line bg-white px-4 py-3 text-lg outline-none focus:border-ink"
       />
 
-      {results.length === 0 && (
+      {results.length === 0 && !searching && (
         <Empty>
           <p className="mb-3">{t("dict.noResults")}</p>
           <Button

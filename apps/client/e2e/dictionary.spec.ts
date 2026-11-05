@@ -15,6 +15,7 @@ test("dictionary search finds words by Spanish and German and adds a card varian
 
   // add "el perro" to a new list through the variant picker
   await search.fill("perro");
+  await expect(page.getByText(/^el\s+perro$/).first()).toBeVisible();
   await page.getByRole("button", { name: "Zur Liste hinzufügen" }).first().click();
   await expect(page.getByText("Welche Form möchtest du lernen?")).toBeVisible();
   await page.getByRole("button", { name: /Mit Artikel/ }).click();

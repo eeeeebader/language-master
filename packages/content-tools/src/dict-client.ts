@@ -99,16 +99,16 @@ export class DictClient {
         if (!ids.has(r.id) && editDistance(q, r.norm) <= 1) bump(r.id, -20);
       }
     }
-    const ranks = new Map(
-      this.db
-        .all<{ id: string; frequency_rank: number | null }>(
-          "SELECT id, frequency_rank FROM lemma WHERE id IN (" +
-            [...ids.keys()].map(() => "?").join(",") +
-            ")",
-          [...ids.keys()],
-        )
-        .map((r) => [r.id, r.frequency_rank ?? 99_999]),
-    );
+    const idList = [...ids.keys()];
+    const ranks = new Map<string, number>();
+    for (let i = 0; i < idList.length; i += 500) {
+      const chunk = idList.slice(i, i + 500);
+      for (const r of this.db.all<{ id: string; frequency_rank: number | null }>(
+        `SELECT id, frequency_rank FROM lemma WHERE id IN (${chunk.map(() => "?").join(",")})`,
+        chunk,
+      ))
+        ranks.set(r.id, r.frequency_rank ?? 99_999);
+    }
     const ordered = [...ids.entries()]
       .sort((a, b) => a[1] - b[1] || (ranks.get(a[0]) ?? 0) - (ranks.get(b[0]) ?? 0))
       .slice(0, limit);

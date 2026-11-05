@@ -2,7 +2,7 @@ import type { CardState, CardVariant, ReviewEvent, UserWord } from "@lm/schema";
 import { isDue, type SessionCard, shuffle } from "@lm/srs";
 import { db } from "@/db/db";
 
-export type Direction = "t2n" | "n2t";
+export type Direction = "t2n" | "n2t" | "both";
 export type Filter = "all" | "due" | "failed" | "new";
 
 export interface BuildOptions {
@@ -19,8 +19,9 @@ function toCard(
   v: CardVariant,
   w: UserWord,
   state: CardState | undefined,
-  dir: Direction,
+  direction: Direction,
 ): SessionCard {
+  const dir = direction === "both" ? (Math.random() < 0.5 ? "t2n" : "n2t") : direction;
   return {
     variantId: v.id,
     wordId: w.id,
@@ -28,6 +29,7 @@ function toCard(
     back: dir === "t2n" ? v.back : v.front,
     pos: w.pos,
     isNew: !state,
+    dir,
   };
 }
 

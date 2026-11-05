@@ -6,6 +6,7 @@
  * sql.js offers the synchronous API the shared DictClient expects. Audio stays outside the pack.
  */
 import { DictClient, type PackManifest, type SqliteLike } from "@lm/content-tools";
+import type { DictionaryEntry } from "@lm/schema";
 import initSqlJs, { type Database, type SqlJsStatic } from "sql.js";
 import sqlWasmUrl from "sql.js/dist/sql-wasm.wasm?url";
 import { db } from "@/db/db";
@@ -24,6 +25,41 @@ const listeners = new Set<Listener>();
 let state: PackState = { status: "none" };
 let client: DictClient | null = null;
 let sql: SqlJsStatic | null = null;
+let worker: Worker | null = null;
+let workerReady = false;
+let reqId = 0;
+const pending = new Map<number, (entries: DictionaryEntry[]) => void>();
+
+function startWorker(bytes: Uint8Array) {
+  worker?.terminate();
+  workerReady = false;
+  worker = new Worker(new URL("../workers/dict.worker.ts", import.meta.url), { type: "module" });
+  worker.onmessage = (
+    e: MessageEvent<{ type: string; id?: number; entries?: DictionaryEntry[] }>,
+  ) => {
+    if (e.data.type === "ready") workerReady = true;
+    if (e.data.type === "result" && e.data.id !== undefined) {
+      pending.get(e.data.id)?.(e.data.entries ?? []);
+      pending.delete(e.data.id);
+    }
+  };
+  const copy = bytes.slice().buffer;
+  worker.postMessage({ type: "open", bytes: copy }, [copy]);
+}
+
+/** Search on the worker; resolves with [] when no pack is open. Callers drop stale answers. */
+export function searchPack(q: string, limit = 30): Promise<DictionaryEntry[]> {
+  if (!worker || !workerReady) return Promise.resolve([]);
+  const id = ++reqId;
+  return new Promise((resolve) => {
+    pending.set(id, resolve);
+    worker?.postMessage({ type: "search", id, q, limit });
+  });
+}
+
+export function packSearchReady(): boolean {
+  return workerReady;
+}
 
 function set(s: PackState) {
   state = s;
@@ -74,6 +110,7 @@ async function openBytes(bytes: Uint8Array, version: number) {
     wrap(database).all<{ n: number }>("SELECT count(*) AS n FROM lemma")[0]?.n ?? 0,
   );
   client = c;
+  startWorker(bytes);
   set({ status: "ready", version, lemmas });
 }
 
@@ -185,5 +222,8 @@ export async function ensurePack(target = "es", native = "de"): Promise<void> {
 export async function removePack(target = "es", native = "de") {
   await db.packFiles.delete(packKey(target, native));
   client = null;
+  worker?.terminate();
+  worker = null;
+  workerReady = false;
   set({ status: "none" });
 }

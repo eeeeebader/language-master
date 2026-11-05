@@ -5,6 +5,8 @@ test("reaction-time session infers a grade and allows a one-tap override", async
   await onboard(page);
   await page.getByRole("link", { name: "Karteikarten" }).click();
   await page.getByRole("checkbox").first().check();
+  await page.getByRole("button", { name: /^Üben/ }).click();
+  await expect(page).toHaveURL(/karteikarten\/practice/);
   await page.getByText("Reaktionszeit", { exact: true }).click();
   await page.getByRole("button", { name: "Starten" }).click();
   await expect(page).toHaveURL(/karteikarten\/session.*mode=reaction/);
@@ -22,6 +24,8 @@ test("progressive mode asks multiple choice first", async ({ page }) => {
   await onboard(page);
   await page.getByRole("link", { name: "Karteikarten" }).click();
   await page.getByRole("checkbox").first().check();
+  await page.getByRole("button", { name: /^Üben/ }).click();
+  await expect(page).toHaveURL(/karteikarten\/practice/);
   await page.getByText("Auswahl & Tippen", { exact: true }).click();
   await page.getByRole("button", { name: "Starten" }).click();
   await expect(page.getByText("Auswahl", { exact: true })).toBeVisible();

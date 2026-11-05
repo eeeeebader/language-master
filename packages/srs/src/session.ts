@@ -7,6 +7,8 @@ export interface SessionCard {
   back: string;
   pos: PartOfSpeech;
   isNew: boolean;
+  /** Prompt direction for this card: target→native or native→target. */
+  dir?: "t2n" | "n2t";
 }
 
 export type ProgressivePhase = "choice" | "typing";

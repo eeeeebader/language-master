@@ -16,7 +16,7 @@ import {
   summarise,
   toLocalDay,
 } from "@lm/srs";
-import { ChatCircleText, X } from "@phosphor-icons/react";
+import { ArrowCounterClockwise, ChatCircleText, SpeakerHigh, X } from "@phosphor-icons/react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
@@ -32,13 +32,15 @@ import { maybeAskPermission, rescheduleNotifications } from "@/lib/notifications
 import { buildSession, type Direction, newCardsSeenToday } from "@/lib/session-builder";
 import { play } from "@/lib/sound";
 import { track } from "@/lib/telemetry";
+import { speak } from "@/lib/tts";
 
 const Search = z.object({
   mode: z.enum(["classic", "reaction", "progressive", "forever"]).default("reaction"),
   lists: z.string().default(""),
   filter: z.enum(["all", "due", "failed", "new"]).default("all"),
-  direction: z.enum(["t2n", "n2t"]).default("t2n"),
+  direction: z.enum(["t2n", "n2t", "both"]).default("t2n"),
   sample: z.coerce.number().default(0),
+  overview: z.coerce.number().default(10),
   onboarding: z.coerce.number().default(0),
 });
 
@@ -51,9 +53,12 @@ interface Pool {
   id: string;
   pos: SessionCard["pos"];
   back: string;
+  front: string;
 }
 
-type Stage = "loading" | "empty" | "front" | "revealed" | "result" | "done";
+type Stage = "loading" | "empty" | "front" | "revealed" | "result" | "overview" | "done";
+
+const RESULT_MS = 3000;
 
 function Session() {
   const search = Route.useSearch();
@@ -70,19 +75,25 @@ function Session() {
   const [lastCard, setLastCard] = useState<SessionCard | null>(null);
   const [sentences, setSentences] = useState<WordSentence[] | null>(null);
   const [newLimitLeft, setNewLimitLeft] = useState(0);
+  const [canGoBack, setCanGoBack] = useState(false);
+  const [recent, setRecent] = useState<SessionCard[]>([]);
+  const [sinceOverview, setSinceOverview] = useState(0);
+  const [overviewSentences, setOverviewSentences] = useState<Record<string, WordSentence>>({});
   const shownAt = useRef(0);
   const reactionRef = useRef<number | null>(null);
   const autoRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mode: SessionMode = search.mode;
   const direction: Direction = search.direction;
+  const overviewEvery = search.overview;
 
   const current = state?.current ? state.cards[state.current] : undefined;
+  const cardDir = current?.dir ?? (direction === "n2t" ? "n2t" : "t2n");
   const phase = current && state ? state.phase[current.variantId] : undefined;
   const useChoice = mode === "progressive" && phase === "choice";
   const useTyping = mode === "progressive" && phase === "typing";
   const promptKind: PromptKind = useChoice
     ? "choice"
-    : direction === "t2n"
+    : cardDir === "t2n"
       ? "target_to_native"
       : "native_to_target";
 
@@ -113,7 +124,8 @@ function Session() {
         allVariants.map((v) => ({
           id: v.id,
           pos: words.get(v.wordId)?.pos ?? "other",
-          back: direction === "t2n" ? v.back : v.front,
+          back: v.back,
+          front: v.front,
         })),
       );
       const recent = await db.events.orderBy("reviewedAt").reverse().limit(50).toArray();
@@ -141,8 +153,21 @@ function Session() {
       reactionRef.current = null;
       setTyped("");
       if (useChoice) {
-        const target: Pool = { id: current.variantId, pos: current.pos, back: current.back };
-        const d = pickDistractors(target, pool, 3);
+        // Distractors must answer in the same direction as the shown card.
+        const dir = current.dir ?? "t2n";
+        const oriented = pool.map((p) => ({
+          id: p.id,
+          pos: p.pos,
+          back: dir === "t2n" ? p.back : p.front,
+          front: dir === "t2n" ? p.front : p.back,
+        }));
+        const target: Pool = {
+          id: current.variantId,
+          pos: current.pos,
+          back: current.back,
+          front: current.front,
+        };
+        const d = pickDistractors(target, oriented, 3);
         setChoices(shuffle([target, ...d]));
       }
     }
@@ -159,7 +184,13 @@ function Session() {
   }, []);
 
   const commit = useCallback(
-    async (grade: Grade, reactionMs: number | null, manual: boolean, correct: boolean | null) => {
+    async (
+      grade: Grade,
+      reactionMs: number | null,
+      manual: boolean,
+      correct: boolean | null,
+      showResult = false,
+    ) => {
       if (!state || !current) return;
       const ev = await recordReview({
         variantId: current.variantId,
@@ -174,30 +205,63 @@ function Session() {
       setLastGrade(grade);
       setLastCorrect(correct);
       setLastCard(current);
+      setCanGoBack(true);
+      setRecent((r) => [...r.filter((c) => c.variantId !== current.variantId), current].slice(-25));
+      setSinceOverview((n) => n + 1);
       const next = planAnswer(state, grade, Date.now());
       setState(next);
       if (grade <= 2) play(grade === 1 ? "easy" : "correct");
       else play("error");
       if (grade === 4) haptics.warn();
       else haptics.tap();
-      if (manual && mode === "classic") {
-        if (isFinished(next)) finish(next);
-        else setStage("front");
+      if (manual && mode === "classic" && !showResult) {
+        proceed(next, sinceOverview + 1);
         return;
       }
       setStage("result");
-      autoRef.current = setTimeout(() => proceed(next), 1600);
+      autoRef.current = setTimeout(() => proceed(next, sinceOverview + 1), RESULT_MS);
     },
     // biome-ignore lint/correctness/useExhaustiveDependencies: proceed/finish are stable closures over state
-    [state, current, mode, promptKind, proceed, finish],
+    [state, current, mode, promptKind, proceed, sinceOverview],
   );
 
-  function proceed(s: SessionState | null = state) {
+  function proceed(s: SessionState | null = state, answered = sinceOverview) {
     if (autoRef.current) clearTimeout(autoRef.current);
     autoRef.current = null;
     if (!s) return;
-    if (isFinished(s)) finish(s);
-    else setStage("front");
+    if (isFinished(s)) {
+      finish(s);
+      return;
+    }
+    if (overviewEvery > 0 && answered >= overviewEvery) {
+      openOverview();
+      return;
+    }
+    setStage("front");
+  }
+
+  async function openOverview() {
+    const ids = recent.slice(-overviewEvery).map((c) => c.wordId);
+    const rows = await db.sentences.where("wordId").anyOf(ids).toArray();
+    const map: Record<string, WordSentence> = {};
+    for (const r of rows.sort((a, b) => a.position - b.position)) map[r.wordId] ??= r;
+    setOverviewSentences(map);
+    setSinceOverview(0);
+    setStage("overview");
+  }
+
+  /** One step back from the next card to change the previous grade. */
+  function goBack() {
+    if (!canGoBack || !lastCard || stage !== "front") return;
+    setCanGoBack(false);
+    setStage("result");
+  }
+
+  /** "Weiß ich nicht": show the solution, grade Again, keep the card in the session. */
+  function dontKnow() {
+    if (!current) return;
+    reactionRef.current = null;
+    commit(4, null, true, false, true);
   }
 
   async function override(g: Grade) {
@@ -270,6 +334,7 @@ function Session() {
     if (!state) return;
     const next = planSkip(state, Date.now());
     setState(next);
+    setCanGoBack(false);
     if (isFinished(next)) finish(next);
   }
 
@@ -376,6 +441,59 @@ function Session() {
             {search.onboarding ? t("common.next") : t("session.toHome")}
           </Button>
         </div>
+      </Page>
+    );
+  }
+
+  if (stage === "overview" && state) {
+    const cards = recent.slice(-overviewEvery);
+    return (
+      <Page>
+        <div className="mb-4 flex items-center gap-3">
+          <button
+            type="button"
+            onClick={close}
+            className="rounded-full p-2 hover:bg-paper-2"
+            aria-label={t("session.stop")}
+          >
+            <X size={22} />
+          </button>
+          <h1 className="text-xl font-extrabold">{t("session.overviewTitle")}</h1>
+        </div>
+        <p className="mb-3 text-sm text-ink-2">{t("session.overviewHint", { n: cards.length })}</p>
+        <div className="space-y-2">
+          {cards.map((c) => {
+            const target = (c.dir ?? "t2n") === "t2n" ? c.front : c.back;
+            const native = (c.dir ?? "t2n") === "t2n" ? c.back : c.front;
+            const sentence = overviewSentences[c.wordId];
+            return (
+              <Card key={c.variantId} className="flex items-start gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="font-bold">
+                    {target} <span className="font-normal text-ink-2">· {native}</span>
+                  </div>
+                  {sentence && (
+                    <div className="mt-1 text-sm text-ink-2">
+                      <span className="italic">{sentence.text}</span>
+                      <span className="text-ink-3"> – {sentence.translation}</span>
+                    </div>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  className="rounded-full bg-sky-soft p-2 text-sky-deep"
+                  onClick={() => speak(target)}
+                  aria-label="Aussprache"
+                >
+                  <SpeakerHigh size={18} />
+                </button>
+              </Card>
+            );
+          })}
+        </div>
+        <Button full size="lg" className="mt-6" onClick={() => setStage("front")}>
+          {t("session.continue")}
+        </Button>
       </Page>
     );
   }
@@ -515,7 +633,7 @@ function Session() {
 
         {stage === "result" && lastGrade && (
           <Card className={cx("mt-4", lastCorrect === false ? "bg-rose-soft" : "bg-sage-soft")}>
-            {lastCorrect === false && mode === "progressive" && (
+            {lastCorrect === false && (mode === "progressive" || lastGrade === 4) && (
               <div className="mb-2 text-center text-sm text-rose-deep">
                 Richtig wäre: <b>{shown.back}</b>
               </div>
@@ -525,18 +643,33 @@ function Session() {
               <span className="text-ink-2">{t("session.override")}</span>
             </div>
             <GradeChips size="md" value={lastGrade} onPick={override} />
-            <Button full variant="ghost" className="mt-2" onClick={() => proceed()}>
+            <Button
+              full
+              variant={autoRef.current ? "ghost" : "primary"}
+              className="mt-2"
+              onClick={() => proceed()}
+            >
               {t("common.next")}
             </Button>
           </Card>
         )}
       </div>
 
-      {stage === "front" && (
-        <div className="mt-6 flex justify-center">
-          <Button variant="ghost" size="sm" onClick={doSkip}>
-            {t("common.skip")}
+      {(stage === "front" || stage === "revealed") && (
+        <div className="mt-6 flex items-center justify-center gap-2">
+          {stage === "front" && canGoBack && lastCard && (
+            <Button variant="ghost" size="sm" onClick={goBack}>
+              <ArrowCounterClockwise size={16} /> {t("session.back")}
+            </Button>
+          )}
+          <Button variant="ghost" size="sm" onClick={dontKnow}>
+            {t("session.dontKnow")}
           </Button>
+          {stage === "front" && (
+            <Button variant="ghost" size="sm" onClick={doSkip}>
+              {t("common.skip")}
+            </Button>
+          )}
         </div>
       )}
       {mode === "forever" && newLimitLeft === 0 && left <= 1 && (

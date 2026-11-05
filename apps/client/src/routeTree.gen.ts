@@ -19,6 +19,7 @@ import { Route as TourRouteImport } from './routes/tour'
 import { Route as DictionaryIndexRouteImport } from './routes/dictionary.index'
 import { Route as DictionaryEntryIdRouteImport } from './routes/dictionary.$entryId'
 import { Route as KarteikartenIndexRouteImport } from './routes/karteikarten.index'
+import { Route as KarteikartenPracticeRouteImport } from './routes/karteikarten.practice'
 import { Route as KarteikartenSessionRouteImport } from './routes/karteikarten.session'
 import { Route as LecturesIndexRouteImport } from './routes/lectures.index'
 import { Route as LecturesSlugRouteImport } from './routes/lectures.$slug'
@@ -29,6 +30,7 @@ import { Route as SettingsStreakRouteImport } from './routes/settings.streak'
 import { Route as StoriesIndexRouteImport } from './routes/stories.index'
 import { Route as StoriesStoryIdRouteImport } from './routes/stories.$storyId'
 import { Route as KarteikartenListsListIdRouteImport } from './routes/karteikarten.lists.$listId'
+import { Route as KarteikartenWordsWordIdRouteImport } from './routes/karteikarten.words.$wordId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -78,6 +80,11 @@ const DictionaryEntryIdRoute = DictionaryEntryIdRouteImport.update({
 const KarteikartenIndexRoute = KarteikartenIndexRouteImport.update({
   id: '/karteikarten/',
   path: '/karteikarten/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const KarteikartenPracticeRoute = KarteikartenPracticeRouteImport.update({
+  id: '/karteikarten/practice',
+  path: '/karteikarten/practice',
   getParentRoute: () => rootRouteImport,
 } as any)
 const KarteikartenSessionRoute = KarteikartenSessionRouteImport.update({
@@ -130,6 +137,11 @@ const KarteikartenListsListIdRoute = KarteikartenListsListIdRouteImport.update({
   path: '/karteikarten/lists/$listId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const KarteikartenWordsWordIdRoute = KarteikartenWordsWordIdRouteImport.update({
+  id: '/karteikarten/words/$wordId',
+  path: '/karteikarten/words/$wordId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -140,6 +152,7 @@ export interface FileRoutesByFullPath {
   '/profile': typeof ProfileRoute
   '/tour': typeof TourRoute
   '/dictionary/$entryId': typeof DictionaryEntryIdRoute
+  '/karteikarten/practice': typeof KarteikartenPracticeRoute
   '/karteikarten/session': typeof KarteikartenSessionRoute
   '/lectures/$slug': typeof LecturesSlugRoute
   '/legal/$doc': typeof LegalDocRoute
@@ -152,6 +165,7 @@ export interface FileRoutesByFullPath {
   '/settings/': typeof SettingsIndexRoute
   '/stories/': typeof StoriesIndexRoute
   '/karteikarten/lists/$listId': typeof KarteikartenListsListIdRoute
+  '/karteikarten/words/$wordId': typeof KarteikartenWordsWordIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -162,6 +176,7 @@ export interface FileRoutesByTo {
   '/profile': typeof ProfileRoute
   '/tour': typeof TourRoute
   '/dictionary/$entryId': typeof DictionaryEntryIdRoute
+  '/karteikarten/practice': typeof KarteikartenPracticeRoute
   '/karteikarten/session': typeof KarteikartenSessionRoute
   '/lectures/$slug': typeof LecturesSlugRoute
   '/legal/$doc': typeof LegalDocRoute
@@ -174,6 +189,7 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsIndexRoute
   '/stories': typeof StoriesIndexRoute
   '/karteikarten/lists/$listId': typeof KarteikartenListsListIdRoute
+  '/karteikarten/words/$wordId': typeof KarteikartenWordsWordIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -185,6 +201,7 @@ export interface FileRoutesById {
   '/profile': typeof ProfileRoute
   '/tour': typeof TourRoute
   '/dictionary/$entryId': typeof DictionaryEntryIdRoute
+  '/karteikarten/practice': typeof KarteikartenPracticeRoute
   '/karteikarten/session': typeof KarteikartenSessionRoute
   '/lectures/$slug': typeof LecturesSlugRoute
   '/legal/$doc': typeof LegalDocRoute
@@ -197,6 +214,7 @@ export interface FileRoutesById {
   '/settings/': typeof SettingsIndexRoute
   '/stories/': typeof StoriesIndexRoute
   '/karteikarten/lists/$listId': typeof KarteikartenListsListIdRoute
+  '/karteikarten/words/$wordId': typeof KarteikartenWordsWordIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -209,6 +227,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/tour'
     | '/dictionary/$entryId'
+    | '/karteikarten/practice'
     | '/karteikarten/session'
     | '/lectures/$slug'
     | '/legal/$doc'
@@ -221,6 +240,7 @@ export interface FileRouteTypes {
     | '/settings/'
     | '/stories/'
     | '/karteikarten/lists/$listId'
+    | '/karteikarten/words/$wordId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -231,6 +251,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/tour'
     | '/dictionary/$entryId'
+    | '/karteikarten/practice'
     | '/karteikarten/session'
     | '/lectures/$slug'
     | '/legal/$doc'
@@ -243,6 +264,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/stories'
     | '/karteikarten/lists/$listId'
+    | '/karteikarten/words/$wordId'
   id:
     | '__root__'
     | '/'
@@ -253,6 +275,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/tour'
     | '/dictionary/$entryId'
+    | '/karteikarten/practice'
     | '/karteikarten/session'
     | '/lectures/$slug'
     | '/legal/$doc'
@@ -265,6 +288,7 @@ export interface FileRouteTypes {
     | '/settings/'
     | '/stories/'
     | '/karteikarten/lists/$listId'
+    | '/karteikarten/words/$wordId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -276,6 +300,7 @@ export interface RootRouteChildren {
   ProfileRoute: typeof ProfileRoute
   TourRoute: typeof TourRoute
   DictionaryEntryIdRoute: typeof DictionaryEntryIdRoute
+  KarteikartenPracticeRoute: typeof KarteikartenPracticeRoute
   KarteikartenSessionRoute: typeof KarteikartenSessionRoute
   LecturesSlugRoute: typeof LecturesSlugRoute
   LegalDocRoute: typeof LegalDocRoute
@@ -288,6 +313,7 @@ export interface RootRouteChildren {
   SettingsIndexRoute: typeof SettingsIndexRoute
   StoriesIndexRoute: typeof StoriesIndexRoute
   KarteikartenListsListIdRoute: typeof KarteikartenListsListIdRoute
+  KarteikartenWordsWordIdRoute: typeof KarteikartenWordsWordIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -362,6 +388,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof KarteikartenIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/karteikarten/practice': {
+      id: '/karteikarten/practice'
+      path: '/karteikarten/practice'
+      fullPath: '/karteikarten/practice'
+      preLoaderRoute: typeof KarteikartenPracticeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/karteikarten/session': {
       id: '/karteikarten/session'
       path: '/karteikarten/session'
@@ -432,6 +465,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof KarteikartenListsListIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/karteikarten/words/$wordId': {
+      id: '/karteikarten/words/$wordId'
+      path: '/karteikarten/words/$wordId'
+      fullPath: '/karteikarten/words/$wordId'
+      preLoaderRoute: typeof KarteikartenWordsWordIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -444,6 +484,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProfileRoute: ProfileRoute,
   TourRoute: TourRoute,
   DictionaryEntryIdRoute: DictionaryEntryIdRoute,
+  KarteikartenPracticeRoute: KarteikartenPracticeRoute,
   KarteikartenSessionRoute: KarteikartenSessionRoute,
   LecturesSlugRoute: LecturesSlugRoute,
   LegalDocRoute: LegalDocRoute,
@@ -456,6 +497,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsIndexRoute: SettingsIndexRoute,
   StoriesIndexRoute: StoriesIndexRoute,
   KarteikartenListsListIdRoute: KarteikartenListsListIdRoute,
+  KarteikartenWordsWordIdRoute: KarteikartenWordsWordIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

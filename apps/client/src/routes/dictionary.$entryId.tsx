@@ -137,7 +137,7 @@ function Entry() {
       )}
 
       <p className="text-xs text-ink-3">
-        Wörterbuchdaten: Wiktionary, CC BY-SA 4.0 (Seed-Version, handkuratiert).
+        Wörterbuchdaten: Wiktionary und WikDict, CC BY-SA 4.0; Häufigkeiten: FrequencyWords (MIT).
       </p>
       <VariantPicker
         entry={pick ? e : null}

@@ -76,16 +76,20 @@ export class DictClient {
           [limit],
         )
         .map((r) => this.hydrate(r));
-    // score: lower is better. exact lemma −100, exact form/gloss −90/−80, prefix −60/−50/−40, fuzzy −20
+    // score: lower is better. exact lemma −100, exact form/gloss −90/−80, prefix −60/−50/−40
+    // (+5 for multi-word entries), fuzzy −20; ties broken by frequency rank.
     const ids = new Map<string, number>();
     const bump = (id: string, score: number) => ids.set(id, Math.min(ids.get(id) ?? 0, score));
+    for (const r of this.db.all<{ lemma_id: string; kind: number }>(
+      "SELECT lemma_id, kind FROM search WHERE norm = ?",
+      [q],
+    ))
+      bump(r.lemma_id, -100 + r.kind * 10);
     for (const r of this.db.all<{ lemma_id: string; norm: string; kind: number }>(
-      "SELECT lemma_id, norm, kind FROM search WHERE norm >= ? AND norm < ? ORDER BY kind, norm LIMIT ?",
-      [q, `${q}￿`, limit * 4],
-    )) {
-      const exact = r.norm === q;
-      bump(r.lemma_id, exact ? -100 + r.kind * 10 : -60 + r.kind * 10);
-    }
+      "SELECT lemma_id, norm, kind FROM search WHERE norm > ? AND norm < ? ORDER BY kind, length(norm) LIMIT ?",
+      [q, `${q}￿`, Math.max(200, limit * 8)],
+    ))
+      bump(r.lemma_id, -60 + r.kind * 10 + (r.norm.includes(" ") ? 5 : 0));
     if (ids.size < limit && q.length >= 3) {
       const lo = q.slice(0, 1);
       for (const r of this.db.all<{ id: string; norm: string }>(

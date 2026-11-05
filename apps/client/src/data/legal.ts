@@ -18,7 +18,7 @@ Verbraucherstreitbeilegung
 Wir sind nicht bereit und nicht verpflichtet, an Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle teilzunehmen (§ 36 VSBG).
 
 Urheberrechtshinweis
-Wörterbuchdaten basieren auf Wiktionary (CC BY-SA 4.0). Lerninhalte, Geschichten und Software: © 2026 [Name].`;
+Wörterbuchdaten basieren auf Wiktionary und WikDict (CC BY-SA 4.0) sowie der Häufigkeitsliste FrequencyWords (MIT). Lerninhalte, Geschichten und Software: © 2026 [Name].`;
 
 export const DATENSCHUTZ = `# Datenschutzerklärung
 

@@ -26,8 +26,9 @@ What works:
   classic, reaction-time, progressive (choice → typing) and Learn Forever. Reaction-time grading
   with self-calibrating base, per-word response profiles (EMA), one-tap override via superseding
   events, 5/10-minute retry loops, the 10-card cognitive-load cap and skip-after-three-Agains.
-- **Dictionary**: a downloadable Spanish–German pack (German-Wiktionary glosses, English-Wiktionary
-  morphology, curated A1 overrides; ~2 600 lemmas plus ~4 000 inflected forms, 1.8 MB) checked
+- **Dictionary**: a downloadable Spanish–German pack (WikDict translations, German-Wiktionary
+  glosses, English-Wiktionary morphology, subtitle frequency ranks, curated A1 overrides; ~46 700
+  lemmas plus ~4 000 inflected forms, 21.6 MB) checked
   against a manifest on launch, stored on the device and queried with sql.js; the bundled ~140-entry
   seed is the fallback. Prefix + fuzzy + accent-insensitive search; variant picker on every form;
   custom entries. An optional audio pack (Piper voice, MP3, ~4 600 clips for headwords, forms and

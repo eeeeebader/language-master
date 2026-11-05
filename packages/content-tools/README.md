@@ -23,11 +23,16 @@ built from two Kaikki files:
   Wiktionary, ~9 MB, ~7 000 lemmas, German sense descriptions and short translations)
 - morphology: `https://kaikki.org/dictionary/Spanish/kaikki.org-dictionary-Spanish.jsonl` (English
   Wiktionary, ~1.1 GB, forms, gender, conjugations, IPA), streamed
+- translations: `https://download.wikdict.com/dictionaries/sqlite/2/es-de.sqlite3` (WikDict, ~49 000
+  Spanish lemmas with short German translations per part of speech and quality scores; the primary
+  gloss source, CC BY-SA 4.0)
+- frequency: `https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018/es/es_50k.txt`
+  (subtitle word frequencies, MIT) for ranking; WikDict importance ranks the rest
 
 ```bash
 pnpm export-seed-overrides --out overrides.es-de.json   # curated A1 glosses from the client seed
 pnpm build-pack --de kaikki.org-dictionary-Spanisch.jsonl --en kaikki.org-dictionary-Spanish.jsonl \
-  --overrides overrides.es-de.json --out dist --version 1
+  --wikdict es-de.sqlite3 --frequency es_50k.txt --overrides overrides.es-de.json --out dist --version 3
 node ../../infra/scripts/publish-pack.mjs --file dist/es-de.v1.sqlite --manifest dist/es-de.v1.manifest.json --publish
 ```
 

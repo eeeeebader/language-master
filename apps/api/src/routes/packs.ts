@@ -22,7 +22,8 @@ export function packRoutes(db: Db) {
       .limit(2);
     const base = row.find((r) => !r.withAudio) ?? row[0];
     if (!base) return c.json({ error: "no pack" }, 404);
-    const audio = row.find((r) => r.withAudio && r.version === base.version);
+    // Audio clips are keyed by text, so the newest published audio pack serves any dictionary version.
+    const audio = row.find((r) => r.withAudio);
     c.header("cache-control", "public, max-age=60, must-revalidate");
     return c.json({
       target: base.target,

@@ -5,3 +5,4 @@ export * from "./lectures";
 export * from "./manifest";
 export * from "./pack";
 export * from "./sqlite";
+export * from "./wikdict";

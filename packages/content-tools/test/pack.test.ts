@@ -81,6 +81,7 @@ describe.skipIf(!sqliteAvailable)("pack build + query (node:sqlite)", () => {
     expect(client.search("encant").map((e) => e.lemma)).toContain("encantado");
     expect(client.search("perrp")[0]?.lemma).toBe("perro");
     expect(client.search("Hund")[0]?.lemma).toBe("perro");
+    expect(client.search("hund").map((e) => e.lemma)).toContain("perro");
     expect(client.search("somos")[0]?.lemma).toBe("ser");
     expect(client.getByLemma("CASA")?.plural).toBe("las casas");
     db.close();

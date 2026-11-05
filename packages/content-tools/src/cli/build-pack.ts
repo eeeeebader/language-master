@@ -6,7 +6,10 @@
  *
  * --de: https://kaikki.org/dewiktionary/Spanisch/kaikki.org-dictionary-Spanisch.jsonl (German glosses)
  * --en: https://kaikki.org/dictionary/Spanish/kaikki.org-dictionary-Spanish.jsonl (forms, gender, IPA)
- * Both CC BY-SA 4.0. Output: dist/es-de.v{n}.sqlite plus dist/es-de.v{n}.manifest.json.
+ * --wikdict: https://download.wikdict.com/dictionaries/sqlite/2/es-de.sqlite3 (short German translations
+ *   per part of speech with quality scores; the primary gloss source)
+ * --frequency: https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018/es/es_50k.txt
+ * All CC BY-SA 4.0 (frequency list MIT). Output: dist/es-de.v{n}.sqlite plus dist/es-de.v{n}.manifest.json.
  */
 import { createHash } from "node:crypto";
 import { createReadStream, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
@@ -25,6 +28,7 @@ import {
 import { packFileName } from "../manifest";
 import { buildPack, type ExtraForm } from "../pack";
 import { openNodeSqlite } from "../sqlite";
+import { parseFrequencyList, readWikdict } from "../wikdict";
 
 function arg(name: string, def?: string): string | undefined {
   const i = process.argv.indexOf(`--${name}`);
@@ -49,6 +53,8 @@ const key = (word: string, pos: string) => `${word}\u0000${pos}`;
 async function main() {
   const de = arg("de");
   const en = arg("en");
+  const wikdict = arg("wikdict");
+  const frequency = arg("frequency");
   const out = arg("out", "dist") as string;
   const version = Number(arg("version", "1"));
   const limit = Number(arg("limit", String(Number.MAX_SAFE_INTEGER)));
@@ -60,6 +66,7 @@ async function main() {
   // 1. German glosses
   const entries = new Map<string, DictionaryEntry>();
   const extraForms = new Map<string, ExtraForm[]>();
+  const importanceByLemma = new Map<string, number>();
   for await (const line of readLines<DeWiktionaryLine>(de, limit)) {
     const infl = inflectedForm(line);
     if (infl) {
@@ -82,6 +89,49 @@ async function main() {
   console.log(
     `de.wiktionary: ${entries.size} lemmas with German glosses, ${[...extraForms.values()].reduce((a, l) => a + l.length, 0)} inflected forms`,
   );
+
+  // 1b. WikDict: short translations become the primary glosses; de.wiktionary fills the gaps
+  if (wikdict) {
+    const wdb = await openNodeSqlite(wikdict);
+    const list = readWikdict(wdb);
+    wdb.close();
+    let added = 0;
+    let replaced = 0;
+    for (const { entry, score, importance } of list) {
+      const k = key(entry.lemma, entry.pos);
+      const prev = entries.get(k);
+      if (!prev) {
+        entries.set(k, { ...entry, frequencyRank: undefined });
+        importanceByLemma.set(
+          entry.lemma,
+          Math.max(importanceByLemma.get(entry.lemma) ?? 0, importance),
+        );
+        added++;
+        continue;
+      }
+      // good WikDict translations replace sense descriptions; otherwise append as extra glosses
+      const seen = new Set(prev.glosses.map((g) => g.text.toLowerCase()));
+      if (score >= 100) {
+        prev.glosses = [
+          ...entry.glosses,
+          ...prev.glosses.filter(
+            (g) => !entry.glosses.some((x) => x.text.toLowerCase() === g.text.toLowerCase()),
+          ),
+        ].slice(0, 4);
+        replaced++;
+      } else {
+        for (const g of entry.glosses)
+          if (!seen.has(g.text.toLowerCase()) && prev.glosses.length < 4) prev.glosses.push(g);
+      }
+      prev.gender ??= entry.gender;
+      prev.article ??= entry.article;
+      importanceByLemma.set(
+        entry.lemma,
+        Math.max(importanceByLemma.get(entry.lemma) ?? 0, importance),
+      );
+    }
+    console.log(`wikdict: ${added} lemmas added, ${replaced} gloss sets replaced`);
+  }
 
   // 2. Morphology from the English extract (streamed; 1.1 GB)
   let merged = 0;
@@ -118,9 +168,32 @@ async function main() {
       });
   }
 
-  // One row per lemma: when the same word exists in several POS keep the first (noun < verb ordering of input).
+  // One row per lemma: prefer a known part of speech over "other"; else keep the first.
   const byLemma = new Map<string, DictionaryEntry>();
-  for (const e of entries.values()) if (!byLemma.has(e.lemma)) byLemma.set(e.lemma, e);
+  for (const e of entries.values()) {
+    const prev = byLemma.get(e.lemma);
+    if (!prev || (prev.pos === "other" && e.pos !== "other")) byLemma.set(e.lemma, e);
+  }
+
+  // 4. Frequency ranks: subtitle frequency list first, then WikDict importance for the rest.
+  const ranks = frequency
+    ? parseFrequencyList(readFileSync(frequency, "utf8"))
+    : new Map<string, number>();
+  const unranked = [...byLemma.values()].filter(
+    (e) => e.frequencyRank === undefined && !ranks.has(e.lemma),
+  );
+  unranked.sort(
+    (a, b) => (importanceByLemma.get(b.lemma) ?? 0) - (importanceByLemma.get(a.lemma) ?? 0),
+  );
+  const base = Math.max(50_000, ranks.size);
+  unranked.forEach((e, i) => {
+    e.frequencyRank = base + i + 1;
+  });
+  for (const e of byLemma.values())
+    if (e.frequencyRank === undefined) e.frequencyRank = ranks.get(e.lemma);
+  console.log(
+    `ranks: ${[...byLemma.values()].filter((e) => (e.frequencyRank ?? 0) <= base).length} from the frequency list`,
+  );
 
   mkdirSync(out, { recursive: true });
   const file = join(out, packFileName("es", "de", version));

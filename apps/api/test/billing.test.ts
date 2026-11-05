@@ -18,7 +18,8 @@ describe("checkout params", () => {
     expect(p.success_url).toBe("http://localhost:5173/stories?checkout=success");
     expect(p.cancel_url).toBe("http://localhost:5173/stories?checkout=cancel");
     expect(p.consent_collection?.terms_of_service).toBe("required");
-    expect((p.custom_text?.terms_of_service_acceptance as { message: string }).message).toBe(WITHDRAWAL_CONSENT_DE);
+    const tos = p.custom_text?.terms_of_service_acceptance as { message: string } | undefined;
+    expect(tos?.message).toBe(WITHDRAWAL_CONSENT_DE);
     expect(p.automatic_tax?.enabled).toBe(true);
   });
 

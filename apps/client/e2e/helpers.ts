@@ -4,7 +4,7 @@ import { expect, type Page } from "@playwright/test";
 export async function onboard(page: Page, name = "Elias", withSession = false) {
   await page.goto("/");
   await expect(page).toHaveURL(/\/onboarding/);
-  await page.getByPlaceholder("Elias").fill(name);
+  await page.getByRole("textbox").first().fill(name);
   await page.getByRole("button", { name: "Weiter" }).click();
   await page.getByRole("button", { name: "Weiter" }).click();
   const boxes = page.getByRole("checkbox");

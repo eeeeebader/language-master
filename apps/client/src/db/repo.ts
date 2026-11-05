@@ -34,14 +34,17 @@ export async function saveSettings(patch: Partial<UserSettings>) {
   await db.settings.put({ ...cur, ...patch });
 }
 
-export async function createSettings(input: Pick<UserSettings, "username" | "isOver16">) {
+export async function createSettings(
+  input: Pick<UserSettings, "username" | "isOver16"> &
+    Partial<Pick<UserSettings, "nativeLanguage" | "activeLanguage">>,
+) {
   const now = nowIso();
   await db.settings.put({
     key: "me",
     username: input.username,
     avatar: "initials",
-    nativeLanguage: "de",
-    activeLanguage: "es",
+    nativeLanguage: input.nativeLanguage ?? "de",
+    activeLanguage: input.activeLanguage ?? "es",
     isOver16: input.isOver16,
     consentVersion: 1,
     consentedAt: now,

@@ -159,8 +159,7 @@ const de = {
   "settings.faq": "Über das Lernen",
   "settings.about": "Version {v} · offline-first",
   "onb.welcome": "Willkommen bei Language Master",
-  "onb.tagline":
-    "Ruhig und spielerisch von null bis A2 – mit dem Ziel, die App irgendwann nicht mehr zu brauchen.",
+  "onb.tagline": "Lerne spielerisch und personalisiert von null bis A2.",
   "onb.username": "Wie sollen wir dich nennen?",
   "onb.languages": "Deine Sprachen",
   "onb.native": "Muttersprache",
@@ -169,12 +168,13 @@ const de = {
   "onb.ageRefused": "Language Master ist für Personen ab 16 Jahren.",
   "onb.legal": "Ich akzeptiere die AGB und die Datenschutzerklärung.",
   "onb.dictionary": "Wörterbuch Spanisch–Deutsch",
-  "onb.dictionaryReady": "Bereit – in dieser Version direkt eingebaut.",
+  "onb.dictionaryReady":
+    "Grundwortschatz ist eingebaut; das vollständige Paket lädt im Hintergrund.",
+  "onb.soon": "bald",
+  "onb.languagesHint": "Du kannst später weitere Sprachen hinzufügen.",
   "onb.firstSession": "Erste Wörter: dich vorstellen",
   "onb.firstSessionHint": "Zwei Minuten, 12 Wörter – und du hast deine erste Liste.",
   "onb.tour": "Kurze Tour",
-  "onb.noAccount":
-    "Konto und Synchronisation kommen mit dem Server. Alles bleibt bis dahin auf diesem Gerät.",
   "tour.home": "Start: Fällige Karten, Serie, Tempo – alles auf einen Blick.",
   "tour.cards": "Karteikarten: Listen kombinieren, vier Modi, alles offline.",
   "tour.dictionary": "Wörterbuch: Jede Form lässt sich mit einem Tipp lernen.",

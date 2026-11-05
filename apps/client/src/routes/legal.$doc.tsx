@@ -3,6 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Markdownish, Page } from "@/components/ui";
 import { AGB, DATENSCHUTZ, IMPRESSUM } from "@/data/legal";
+import { useSettings } from "@/hooks/useSettings";
 import { fetchLegal, type LegalCurrent } from "@/lib/consent";
 
 export const Route = createFileRoute("/legal/$doc")({ component: Legal });
@@ -11,6 +12,7 @@ const DOCS: Record<string, string> = { agb: AGB, datenschutz: DATENSCHUTZ, impre
 
 function Legal() {
   const { doc } = Route.useParams();
+  const settings = useSettings();
   const [server, setServer] = useState<LegalCurrent>({});
   useEffect(() => {
     fetchLegal().then(setServer);
@@ -21,7 +23,10 @@ function Legal() {
   return (
     <Page
       back={
-        <Link to="/settings" className="rounded-full p-2 hover:bg-paper-2">
+        <Link
+          to={settings ? "/settings" : "/onboarding"}
+          className="rounded-full p-2 hover:bg-paper-2"
+        >
           <ArrowLeft size={22} />
         </Link>
       }

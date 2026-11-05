@@ -18,7 +18,14 @@ import { identify, track } from "@/lib/telemetry";
 
 export const Route = createRootRoute({ component: Root });
 
-const NO_NAV = ["/onboarding", "/tour", "/consent", "/karteikarten/session", "/stories/"];
+const NO_NAV = [
+  "/onboarding",
+  "/tour",
+  "/consent",
+  "/karteikarten/session",
+  "/stories/",
+  "/legal/",
+];
 
 function Root() {
   const settings = useSettings();
@@ -89,7 +96,8 @@ function Root() {
 
   useEffect(() => {
     if (settings === undefined) return; // loading
-    if (!settings && path !== "/onboarding") navigate({ to: "/onboarding" });
+    const publicPath = path === "/onboarding" || path.startsWith("/legal") || path === "/faq";
+    if (!settings && !publicPath) navigate({ to: "/onboarding" });
   }, [settings, path, navigate]);
 
   if (settings === undefined)

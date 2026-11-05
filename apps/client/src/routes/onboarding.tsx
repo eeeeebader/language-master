@@ -1,5 +1,6 @@
+import type { NativeLanguage, StudyLanguage } from "@lm/schema";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button, Card, Page } from "@/components/ui";
 import { DICTIONARY_ES, STARTER_LEMMAS } from "@/data/dictionary-es";
 import { db } from "@/db/db";
@@ -16,6 +17,73 @@ import { t } from "@/lib/i18n";
 import { track } from "@/lib/telemetry";
 
 export const Route = createFileRoute("/onboarding")({ component: Onboarding });
+
+interface LangOption {
+  code: string;
+  flag: string;
+  name: string;
+  available: boolean;
+}
+
+/** Only pairs with a dictionary pack and lectures are selectable; the rest are shown as coming. */
+const NATIVE_OPTIONS: LangOption[] = [
+  { code: "de", flag: "🇩🇪", name: "Deutsch", available: true },
+  { code: "en", flag: "🇬🇧", name: "English", available: false },
+  { code: "fr", flag: "🇫🇷", name: "Français", available: false },
+];
+const STUDY_OPTIONS: LangOption[] = [
+  { code: "es", flag: "🇪🇸", name: "Español", available: true },
+  { code: "fr", flag: "🇫🇷", name: "Français", available: false },
+  { code: "it", flag: "🇮🇹", name: "Italiano", available: false },
+  { code: "pt", flag: "🇵🇹", name: "Português", available: false },
+  { code: "en", flag: "🇬🇧", name: "English", available: false },
+];
+
+function LanguagePicker<T extends string>({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: T;
+  onChange: (v: T) => void;
+  options: LangOption[];
+}) {
+  return (
+    <div className="mt-6">
+      <div className="mb-2 text-sm font-semibold text-ink-2">{label}</div>
+      <div className="grid grid-cols-2 gap-2">
+        {options.map((o) => {
+          const selected = o.code === value;
+          return (
+            <button
+              type="button"
+              key={o.code}
+              disabled={!o.available}
+              onClick={() => onChange(o.code as T)}
+              className={`flex items-center gap-2 rounded-card border px-3 py-3 text-left transition-all ${
+                selected
+                  ? "border-ink bg-ink text-paper"
+                  : o.available
+                    ? "border-line bg-white hover:bg-paper-2"
+                    : "border-line bg-paper-2 text-ink-3"
+              }`}
+            >
+              <span className="text-xl">{o.flag}</span>
+              <span className="flex-1 font-semibold">{o.name}</span>
+              {!o.available && (
+                <span className="rounded-chip bg-white px-2 py-0.5 text-[11px] text-ink-3">
+                  {t("onb.soon")}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 async function createStarterList() {
   const existing = await db.lists.filter((l) => l.isSystem && l.title === "Erste Wörter").first();
@@ -48,12 +116,43 @@ async function createStarterList() {
   return list;
 }
 
+const ONB_KEY = "lm.onboarding";
+interface OnbDraft {
+  step: number;
+  name: string;
+  native: NativeLanguage;
+  target: StudyLanguage;
+  over16: boolean | null;
+  legal: boolean;
+}
+function loadDraft(): Partial<OnbDraft> {
+  try {
+    return JSON.parse(sessionStorage.getItem(ONB_KEY) ?? "{}") as Partial<OnbDraft>;
+  } catch {
+    return {};
+  }
+}
+
 function Onboarding() {
   const navigate = useNavigate();
-  const [step, setStep] = useState(0);
-  const [name, setName] = useState("");
-  const [over16, setOver16] = useState<boolean | null>(null);
-  const [legal, setLegal] = useState(false);
+  const draft = loadDraft();
+  const [step, setStep] = useState(draft.step ?? 0);
+  const [name, setName] = useState(draft.name ?? "");
+  const [native, setNative] = useState<NativeLanguage>(draft.native ?? "de");
+  const [target, setTarget] = useState<StudyLanguage>(draft.target ?? "es");
+  const [over16, setOver16] = useState<boolean | null>(draft.over16 ?? null);
+  const [legal, setLegal] = useState(draft.legal ?? false);
+  // Keep the draft while the learner reads the AGB or Datenschutz and comes back.
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(
+        ONB_KEY,
+        JSON.stringify({ step, name, native, target, over16, legal }),
+      );
+    } catch {
+      /* ignore */
+    }
+  }, [step, name, native, target, over16, legal]);
   const [busy, setBusy] = useState(false);
   const pack = usePackState();
   const pct =
@@ -63,6 +162,7 @@ function Onboarding() {
 
   async function finish(startSession: boolean) {
     setBusy(true);
+    sessionStorage.removeItem(ONB_KEY);
     if (!(await getSettings()))
       await createSettings({ username: name.trim() || "Lernende*r", isOver16: true });
     await saveSettings({ onboardingDone: true });
@@ -109,9 +209,8 @@ function Onboarding() {
               onChange={(e) => setName(e.target.value)}
               maxLength={32}
               className="mt-2 w-full rounded-card border border-line bg-white px-4 py-3 text-lg outline-none focus:border-ink"
-              placeholder="Elias"
+              placeholder=""
             />
-            <p className="mt-3 text-sm text-ink-3">{t("onb.noAccount")}</p>
             <Button
               full
               size="lg"
@@ -127,17 +226,19 @@ function Onboarding() {
         {step === 1 && (
           <>
             <h1 className="text-3xl font-extrabold tracking-tight">{t("onb.languages")}</h1>
-            <Card className="mt-6">
-              <div className="text-sm text-ink-2">{t("onb.native")}</div>
-              <div className="text-xl font-bold">🇩🇪 Deutsch</div>
-            </Card>
-            <Card className="mt-3">
-              <div className="text-sm text-ink-2">{t("onb.target")}</div>
-              <div className="text-xl font-bold">🇪🇸 Español</div>
-            </Card>
-            <p className="mt-3 text-sm text-ink-3">
-              Weitere Sprachen folgen, sobald ihre Wörterbuchpakete fertig sind.
-            </p>
+            <LanguagePicker
+              label={t("onb.native")}
+              value={native}
+              onChange={setNative}
+              options={NATIVE_OPTIONS}
+            />
+            <LanguagePicker
+              label={t("onb.target")}
+              value={target}
+              onChange={setTarget}
+              options={STUDY_OPTIONS.filter((o) => o.code !== native)}
+            />
+            <p className="mt-3 text-sm text-ink-3">{t("onb.languagesHint")}</p>
             <Button full size="lg" className="mt-8" onClick={() => setStep(2)}>
               {t("common.next")}
             </Button>
@@ -165,11 +266,11 @@ function Onboarding() {
               />
               <span className="font-medium">
                 Ich akzeptiere die{" "}
-                <a className="underline" href="/legal/agb" target="_blank" rel="noreferrer">
+                <a className="underline" href="/legal/agb">
                   AGB
                 </a>{" "}
                 und die{" "}
-                <a className="underline" href="/legal/datenschutz" target="_blank" rel="noreferrer">
+                <a className="underline" href="/legal/datenschutz">
                   Datenschutzerklärung
                 </a>
                 .

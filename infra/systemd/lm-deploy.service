@@ -1,0 +1,9 @@
+[Unit]
+Description=Language Master pull-deploy (GHCR -> docker compose)
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/language-master/deploy.env
+ExecStart=/opt/language-master/infra/scripts/pull-deploy.sh

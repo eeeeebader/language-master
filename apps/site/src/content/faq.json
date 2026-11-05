@@ -1,0 +1,38 @@
+[
+  {
+    "q": "Wofür ist Language Master?",
+    "a": "Um dich ruhig und spielerisch von null bis A1/A2 zu bringen. Das Ziel ist, dass du der App entwächst und liest, was dich interessiert. Wenn du deine nächste Sprache beginnst, komm zurück."
+  },
+  {
+    "q": "Wie entscheiden die Karteikarten, was ich sehe?",
+    "a": "Ein Scheduler namens FSRS schätzt, wie gut du jedes Wort erinnerst, und zeigt es kurz bevor du es vergessen würdest. In Zeitmodi bestimmt deine Antwortgeschwindigkeit die Note; fühlt sich eine Note falsch an, tippe eine andere."
+  },
+  {
+    "q": "Warum benutzen meine Geschichten meine Wörter?",
+    "a": "Jeder kennt andere Wörter. Deine Geschichte wird aus den Wörtern gebaut, die du kennst, plus ein paar neuen und denen, die du immer wieder vergisst – damit du sie im Kontext siehst."
+  },
+  {
+    "q": "Was ist die Abdeckung?",
+    "a": "Der Anteil der Wörter eines Texts, die du schon kennst. Rund 95 % ist der Sweet Spot: leicht genug zum Folgen, mit ein paar Wörtern zum Mitnehmen. Willst du dich in Neues stürzen, schieb den Regler."
+  },
+  {
+    "q": "Wie werden KI-Geschichten gemacht, und was sind sie nicht?",
+    "a": "Ein Sprachmodell schreibt einen kurzen Text aus deinen Einstellungen; die Grammatiknotizen werden gegen einen Parser geprüft. Die Geschichten sind bewusst funktional: einfach, klar, verständlich. Sie sind Trainingsmaterial, keine Literatur."
+  },
+  {
+    "q": "Reicht das, um die Sprache zu lernen?",
+    "a": "Nein. Verständliche Geschichten decken nur einen kleinen Teil ab: Tempo, Slang, Humor, Vielfalt. Lies parallel einfache echte Bücher, hör Musik und Podcasts, schau Serien im Original."
+  },
+  {
+    "q": "Was passiert nach A2?",
+    "a": "Du bist weit gekommen. Ab hier bringen dir echte Gespräche, Bücher, Podcasts und Filme mehr als jede App. Du bist gut vorbereitet."
+  },
+  {
+    "q": "Wie funktioniert die Serie?",
+    "a": "Du wählst deine Lerntage; nur die zählen. Urlaub pausiert sie, und eine unterbrochene Serie lässt sich innerhalb von 5 verpassten Lerntagen wiederherstellen – ohne Strafe."
+  },
+  {
+    "q": "Was passiert mit meinen Daten?",
+    "a": "In dieser Version bleibt alles auf deinem Gerät. Später: Listen, Wörter und Geschichten werden 12 Monate nach dem letzten Login gelöscht, das Konto nach 24 Monaten. Du kannst alles jederzeit exportieren oder löschen."
+  }
+]

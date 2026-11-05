@@ -1,0 +1,59 @@
+# Local override: no TLS, plain ports, source bind mounts for api and nlp.
+# docker compose -f docker/docker-compose.yml -f docker/docker-compose.dev.yml --env-file docker/.env up
+services:
+  traefik:
+    command:
+      - --api.dashboard=true
+      - --api.insecure=true
+      - --log.level=DEBUG
+      - --providers.docker=true
+      - --providers.docker.exposedByDefault=false
+      - --providers.docker.network=lm-edge
+      - --providers.file.filename=/etc/traefik/dynamic.yml
+      - --entryPoints.web.address=:80
+      - --entryPoints.websecure.address=:443
+    ports:
+      - "80:80"
+      - "8080:8080"
+    labels:
+      traefik.http.routers.supabase.entrypoints: web
+      traefik.http.routers.supabase.tls: "false"
+      traefik.http.routers.supabase-studio.entrypoints: web
+      traefik.http.routers.supabase-studio.tls: "false"
+  api:
+    build:
+      target: dev
+    command: ["pnpm", "--filter", "@lm/api", "dev"]
+    volumes:
+      - ..:/workspace
+      - /workspace/node_modules
+    environment:
+      NODE_ENV: development
+    ports:
+      - "3000:3000"
+    labels:
+      traefik.http.routers.api.entrypoints: web
+      traefik.http.routers.api.tls: "false"
+      traefik.http.routers.api-stories.entrypoints: web
+      traefik.http.routers.api-stories.tls: "false"
+  nlp:
+    volumes:
+      - ../apps/nlp/app:/app/app
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080", "--reload"]
+    ports:
+      - "8081:8080"
+  piper:
+    ports:
+      - "5000:5000"
+  client:
+    labels:
+      traefik.http.routers.client.entrypoints: web
+      traefik.http.routers.client.tls: "false"
+  admin:
+    labels:
+      traefik.http.routers.admin.entrypoints: web
+      traefik.http.routers.admin.tls: "false"
+  site:
+    labels:
+      traefik.http.routers.site.entrypoints: web
+      traefik.http.routers.site.tls: "false"

@@ -6,10 +6,13 @@ colour-coded grammar. German native language, Spanish study language (v1).
 
 The full product and technical plan lives in `docs/plan.md`.
 
-## Status: v0.1 (local-only POC)
+## Status: v0.2 (client POC + full infrastructure scaffold)
 
-Everything in this version runs 100 % on the device. There is no backend, no account and no sync
-yet; all data lives in IndexedDB on the device and can be exported or wiped from the profile page.
+The client runs 100 % on the device and stays in local-only mode until the Supabase and API env
+vars are set (`apps/client/.env.example`). With them set it signs in by magic link and syncs the
+append-only review log through the API. The whole server side from the plan is scaffolded and
+validated (typecheck, tests, compose config) but not yet deployed or exercised against a live
+Supabase stack.
 
 What works:
 
@@ -37,19 +40,48 @@ What works:
 - **Profile / settings**: avatar, member since, language stats, activity calendar, sound, haptics,
   daily new cards, streak settings, FAQ, legal drafts, JSON export, delete everything.
 
-Not in v0.1 (next): Supabase auth + sync of the event log, Hono API with the story pipeline
-(LLM + spaCy), real dictionary packs from Wiktionary (SQLite), audio packs, local notifications,
-payments, admin console, Capacitor native builds (config is in place).
+Server side and tooling (v0.2, scaffolded):
+
+- **apps/api**: Hono on Node 22. Sync push/pull, story pipeline (quota gate → LLM writer →
+  spaCy annotate → LLM grammar notes → Zod validation, tolerant checks, one retry, refund),
+  Stripe and RevenueCat webhooks → entitlements, account export/delete, nightly retention cron,
+  migrations with advisory lock. Golden tests with a recorded fake LLM.
+- **packages/database**: Drizzle schema for every table in the plan, hand-written initial
+  migration, RLS policies, app_settings seed.
+- **apps/nlp**: FastAPI + spaCy `es_core_news_md`, `/annotate` in the StoryToken shape.
+- **apps/admin**: back office (Users, Limits, Legal, Changelog, Jobs, Audit, Content: lectures with
+  live preview, dictionary, official stories, Languages, Finance, Analytics, Flags) with a mock mode
+  when no Supabase env is set. Its README defines the `/admin/*` API contract the API still has to implement.
+- **apps/site**: Astro marketing site + VitePress docs (architecture, offline data model, pipeline,
+  packs, lectures, admin, legal).
+- **packages/ui**, **packages/i18n**, **packages/content-tools**: design tokens and pure lecture
+  components; i18next catalog with a CI key check; Kaikki → SQLite pack builder (FTS5, `node:sqlite`),
+  dict client, lecture validator, Piper audio renderer.
+- **infra/ + docker/**: official self-hosted Supabase (pinned), Traefik v3 stack for api/nlp/piper/
+  static sites/listmonk, key generator, backup/restore and pull-deploy scripts with systemd timers.
+- **.github/workflows**: CI (lint, typecheck, test, build, NLP tests, compose checks), GHCR image
+  release on main, Capacitor mobile builds on tags (gated on secrets).
+
+Still open: implementing the `/admin/*` endpoints in the API, running the stack end to end against
+Supabase, local notifications, the real Wiktionary pack build and audio packs, and store releases.
 
 ## Repo layout
 
 ```
 apps/client          Vite + React 19 + TanStack Router + Tailwind 4 + Dexie, Capacitor config
-packages/schema      Zod 4 schemas: vocabulary, review events, lecture blocks, story document, settings
-packages/srs         Pure TS: FSRS wrapper (ts-fsrs), event replay, reaction-time grading,
-                     session planner, streak logic, mastery timeline — unit-tested
-packages/content-tools  (placeholder) dictionary pack builder, lecture validator
-docs/                product and technical plan
+apps/admin           Vite + React admin console
+apps/api             Hono API: sync, story pipeline, webhooks, cron, migrations
+apps/nlp             Python FastAPI + spaCy
+apps/site            Astro marketing site + VitePress docs
+packages/schema      Zod 4 schemas shared by everything
+packages/srs         FSRS wrapper, replay, grading, session planner, streak (pure TS, tested)
+packages/database    Drizzle schema, migrations, RLS, seeds
+packages/ui          design tokens, pure lecture components, sound sprite manifest
+packages/i18n        i18next catalogs (de) + key check
+packages/content-tools  dictionary pack builder, dict client, lecture validator, audio renderer
+docker/              Traefik stack for everything that is not Supabase
+infra/               self-hosted Supabase, scripts (keys, backup, deploy), systemd units
+docs/                plan summary and infrastructure docs
 ```
 
 ## Develop
@@ -57,11 +89,20 @@ docs/                product and technical plan
 ```bash
 corepack enable && pnpm install
 pnpm dev          # client on http://127.0.0.1:5173
-pnpm test         # vitest in all packages
+pnpm dev:admin    # admin on http://127.0.0.1:5174 (mock mode without env)
+pnpm dev:api      # API (needs DATABASE_URL etc., see apps/api/.env.example)
+pnpm dev:site
+pnpm test         # vitest in all packages + i18n key check
 pnpm typecheck
 pnpm lint         # biome
 pnpm build
+make keys         # generate Supabase JWT secret + anon/service keys
+make supabase-up  # self-hosted Supabase (infra/supabase/.env required)
+make stack-dev    # Traefik + api + nlp + piper locally
+make check        # validate all compose files
 ```
+
+See `docs/infra.md` for the production topology and deploy flow.
 
 Native shells: `pnpm --filter @lm/client exec cap add ios|android` then `pnpm --filter @lm/client cap:sync`.
 

@@ -17,6 +17,7 @@
     "@lm/schema": "workspace:*",
     "@lm/srs": "workspace:*",
     "@phosphor-icons/react": "2.1.10",
+    "@supabase/supabase-js": "2.119.0",
     "@tanstack/react-router": "1.170.46",
     "dexie": "4.4.7",
     "dexie-react-hooks": "4.4.0",

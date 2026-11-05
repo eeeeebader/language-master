@@ -1,0 +1,40 @@
+---
+import "../styles/global.css";
+
+const { title = "Language Master", description = "Ruhig und spielerisch von null bis A2." } =
+  Astro.props;
+const nav = [
+  ["/", "Start"],
+  ["/pricing", "Preise"],
+  ["/faq", "FAQ"],
+  ["/changelog", "Changelog"],
+  ["/docs/", "Docs"],
+];
+---
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#FAF8F5" />
+    <title>{title}</title>
+  </head>
+  <body>
+    <header class="mx-auto flex max-w-4xl items-center justify-between px-4 py-5">
+      <a href="/" class="text-xl font-extrabold tracking-tight">Language Master</a>
+      <nav class="flex gap-4 text-sm font-medium text-ink-2">
+        {nav.map(([href, label]) => <a href={href} class="hover:text-ink">{label}</a>)}
+      </nav>
+    </header>
+    <main class="mx-auto max-w-4xl px-4 pb-20"><slot /></main>
+    <footer class="border-t border-line">
+      <div class="mx-auto flex max-w-4xl flex-wrap gap-4 px-4 py-6 text-sm text-ink-3">
+        <a href="/impressum">Impressum</a>
+        <a href="/datenschutz">Datenschutz</a>
+        <a href="/agb">AGB</a>
+        <span class="ml-auto">Wörterbuchdaten: Wiktionary, CC BY-SA 4.0</span>
+      </div>
+    </footer>
+  </body>
+</html>

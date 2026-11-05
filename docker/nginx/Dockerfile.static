@@ -1,0 +1,7 @@
+# Generic static image: build args pick the dist folder and nginx config.
+# docker build -f docker/nginx/Dockerfile.static --build-arg DIST=apps/client/dist --build-arg CONF=spa.conf .
+FROM nginx:1.27-alpine
+ARG DIST=apps/client/dist
+ARG CONF=spa.conf
+COPY docker/nginx/${CONF} /etc/nginx/conf.d/default.conf
+COPY ${DIST} /usr/share/nginx/html

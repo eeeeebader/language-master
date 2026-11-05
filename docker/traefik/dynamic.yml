@@ -1,0 +1,24 @@
+http:
+  middlewares:
+    ratelimit:
+      rateLimit:
+        average: 20
+        burst: 60
+        period: 1s
+    ratelimit-llm:
+      rateLimit:
+        average: 2
+        burst: 5
+        period: 1s
+    admin-allowlist:
+      ipAllowList:
+        sourceRange: ["${ADMIN_ALLOWLIST}"]
+    security-headers:
+      headers:
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+        frameDeny: true
+        contentTypeNosniff: true
+        referrerPolicy: strict-origin-when-cross-origin
+    compress:
+      compress: {}

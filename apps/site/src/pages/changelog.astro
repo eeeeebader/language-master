@@ -1,0 +1,16 @@
+---
+import log from "../content/changelog.json";
+import Base from "../layouts/Base.astro";
+---
+<Base title="Changelog · Language Master">
+  <h1 class="text-3xl font-extrabold">Changelog</h1>
+  <p class="mt-2 text-sm text-ink-2">Einträge werden im Admin gepflegt und erscheinen hier und in der App unter Einstellungen.</p>
+  <div class="mt-6 space-y-4">
+    {log.map((e) => (
+      <div class="rounded-card border border-line bg-white/70 p-4">
+        <div class="flex items-baseline gap-3"><span class="text-lg font-extrabold">v{e.version}</span><span class="text-sm text-ink-3">{e.date}</span></div>
+        <ul class="mt-2 list-disc space-y-1 pl-5 text-ink-2">{e.notes.map((n) => <li>{n}</li>)}</ul>
+      </div>
+    ))}
+  </div>
+</Base>

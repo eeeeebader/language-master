@@ -9,3 +9,15 @@ apps/client/android/
 .env
 .env.*
 !.env.example
+# infra / services
+infra/supabase/volumes/db/data/
+infra/supabase/volumes/storage/
+docker/.env
+infra/supabase/.env
+**/.venv/
+**/__pycache__/
+**/*.pyc
+apps/site/.astro/
+apps/site/docs/.vitepress/cache/
+apps/site/docs/.vitepress/dist/
+packages/content-tools/packs/*.sqlite

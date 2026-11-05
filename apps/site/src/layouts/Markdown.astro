@@ -1,0 +1,11 @@
+---
+import Base from "./Base.astro";
+
+const { frontmatter } = Astro.props;
+---
+<Base title={`${frontmatter.title} · Language Master`}>
+  <article class="prose-lm max-w-none space-y-3 leading-relaxed [&_h1]:text-3xl [&_h1]:font-extrabold [&_h2]:mt-6 [&_h2]:text-xl [&_h2]:font-bold [&_table]:w-full [&_td]:py-1 [&_th]:text-left">
+    <slot />
+  </article>
+  <p class="mt-8 text-xs text-ink-3">Entwurf. Keine Rechtsberatung; vor Veröffentlichung anwaltlich prüfen lassen.</p>
+</Base>

@@ -9,7 +9,15 @@
       "!**/routeTree.gen.ts",
       "!**/*.svg",
       "!**/*.css",
-      "!**/*.md"
+      "!**/*.md",
+      "!infra/supabase/volumes",
+      "!**/*.py",
+      "!**/*.yml",
+      "!**/*.yaml",
+      "!**/.astro",
+      "!**/docs/.vitepress/cache",
+      "!**/migrations/*.sql",
+      "!**/*.astro"
     ]
   },
   "formatter": {

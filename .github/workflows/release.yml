@@ -1,0 +1,105 @@
+name: Release images
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  OWNER: ${{ github.repository_owner }}
+
+jobs:
+  build-web:
+    name: build web bundles
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: corepack enable && corepack prepare --activate
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -r build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: |
+            apps/client/dist
+            apps/admin/dist
+            apps/site/dist
+          if-no-files-found: error
+
+  images:
+    name: ${{ matrix.image }}
+    needs: build-web
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: language-master-api
+            context: .
+            dockerfile: apps/api/Dockerfile
+            args: ""
+          - image: language-master-nlp
+            context: apps/nlp
+            dockerfile: apps/nlp/Dockerfile
+            args: ""
+          - image: language-master-piper
+            context: docker/piper
+            dockerfile: docker/piper/Dockerfile
+            args: PIPER_VOICE=es_ES-davefx-medium
+          - image: language-master-client
+            context: .
+            dockerfile: docker/nginx/Dockerfile.static
+            args: |
+              DIST=apps/client/dist
+              CONF=spa.conf
+          - image: language-master-admin
+            context: .
+            dockerfile: docker/nginx/Dockerfile.static
+            args: |
+              DIST=apps/admin/dist
+              CONF=spa.conf
+          - image: language-master-site
+            context: .
+            dockerfile: docker/nginx/Dockerfile.static
+            args: |
+              DIST=apps/site/dist
+              CONF=static.conf
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: apps
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.OWNER }}/${{ matrix.image }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,prefix=sha-
+            type=ref,event=branch
+      - uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          push: true
+          build-args: ${{ matrix.args }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,scope=${{ matrix.image }},mode=max
+  # The server's pull agent (infra/scripts/pull-deploy.sh on a systemd timer) picks up :latest.

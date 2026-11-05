@@ -1,0 +1,92 @@
+---
+import Base from "../layouts/Base.astro";
+
+const tiers = [
+  {
+    name: "Kostenlos",
+    price: "0 €",
+    items: [
+      "Alle Lernfunktionen, Lektionen und Karteikarten-Modi für eine aktive Sprache",
+      "1 KI-Geschichte pro Tag",
+      "2 gespeicherte Geschichten",
+    ],
+    tone: "bg-sage-soft",
+  },
+  {
+    name: "Premium",
+    price: "12,99 € einmalig",
+    items: [
+      "5 Sprachen gleichzeitig",
+      "Archiv bis 50 Geschichten je Sprache",
+      "25 Geschichten-Tokens inklusive",
+    ],
+    tone: "bg-amber-soft",
+  },
+  {
+    name: "Token-Pakete",
+    price: "2,99 € / 9,99 €",
+    items: [
+      "10 bzw. 50 zusätzliche Geschichten",
+      "Token wird nur bei Erfolg abgebucht",
+      "Erstattung bei Fehlschlag",
+    ],
+    tone: "bg-sky-soft",
+  },
+];
+const colours = [
+  ["grammar-sage", "Verbformen"],
+  ["grammar-rose", "Nominalphrasen"],
+  ["grammar-lavender", "Pronomen & Bezüge"],
+  ["grammar-amber", "Zeit & Aspekt"],
+  ["grammar-sky", "Konnektoren"],
+];
+---
+<Base>
+  <section class="py-12">
+    <h1 class="max-w-2xl text-5xl font-extrabold leading-tight tracking-tight">Von null bis A2 – ruhig, spielerisch, offline.</h1>
+    <p class="mt-5 max-w-2xl text-xl text-ink-2">
+      Karteikarten mit FSRS, ein Wörterbuch, das ohne Netz funktioniert, kurze Lektionen und
+      KI-Geschichten aus deinen eigenen Wörtern. Gebaut, damit du die App irgendwann nicht mehr brauchst.
+    </p>
+    <div class="mt-8 flex gap-3">
+      <a href="/pricing" class="rounded-chip bg-ink px-5 py-3 font-semibold text-paper">Preise</a>
+      <a href="/docs/" class="rounded-chip bg-paper-2 px-5 py-3 font-semibold">Wie es funktioniert</a>
+    </div>
+  </section>
+
+  <section class="grid gap-4 py-8 md:grid-cols-2">
+    {[
+      ["Karteikarten, die dich lesen", "Vier Modi, Reaktionszeit-Bewertung, ein Wort pro Lemma. Deine Antwortzeit setzt die Note; ein Tipp korrigiert sie."],
+      ["Wörterbuch, 100 % offline", "Artikel, Plural, Konjugationen, Beispielsätze und Audio – jede Form mit einem Tipp lernbar."],
+      ["Lektionen als Pfad", "Alphabet, Betonung, Zahlen, Vorstellen: kurze Referenzkarten, lies sie, wenn du sie brauchst."],
+      ["Geschichten aus deinen Wörtern", "Verständlich ab ca. 95 % Abdeckung, mit farbiger Grammatik und einem Wort-Drawer in jedem Satz."],
+    ].map(([h, p]) => (
+      <div class="rounded-card border border-line bg-white/70 p-5">
+        <h2 class="text-lg font-bold">{h}</h2>
+        <p class="mt-1 text-ink-2">{p}</p>
+      </div>
+    ))}
+  </section>
+
+  <section class="py-8">
+    <h2 class="text-2xl font-extrabold">Fünf Farben, eine Grammatik</h2>
+    <p class="mt-2 text-ink-2">Reader, Lektionen und Wörterbuch färben dasselbe immer gleich.</p>
+    <div class="mt-4 flex flex-wrap gap-2 text-lg">
+      {colours.map(([c, l]) => <span class={`${c} rounded px-2 py-0.5`}>{l}</span>)}
+    </div>
+  </section>
+
+  <section class="py-8" id="tiers">
+    <h2 class="text-2xl font-extrabold">Fair und ohne Fallen</h2>
+    <div class="mt-4 grid gap-4 md:grid-cols-3">
+      {tiers.map((t) => (
+        <div class={`rounded-card p-5 ${t.tone}`}>
+          <div class="text-sm font-semibold text-ink-2">{t.name}</div>
+          <div class="text-2xl font-extrabold">{t.price}</div>
+          <ul class="mt-3 space-y-1 text-sm">{t.items.map((i) => <li>• {i}</li>)}</ul>
+        </div>
+      ))}
+    </div>
+    <p class="mt-4 text-sm text-ink-3">Premium und Tokens gehören zum Konto, nicht zum Gerät. Unterstützung (kein Abo, keine Spende) nur über die Website.</p>
+  </section>
+</Base>

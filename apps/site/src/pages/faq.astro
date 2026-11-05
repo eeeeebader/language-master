@@ -1,0 +1,15 @@
+---
+import faq from "../content/faq.json";
+import Base from "../layouts/Base.astro";
+---
+<Base title="FAQ · Language Master">
+  <h1 class="text-3xl font-extrabold">Über das Lernen</h1>
+  <div class="mt-6 space-y-3">
+    {faq.map((f, i) => (
+      <div class="rounded-card border border-line bg-white/70 p-4">
+        <h2 class="font-bold">{i + 1}. {f.q}</h2>
+        <p class="mt-1 text-ink-2">{f.a}</p>
+      </div>
+    ))}
+  </div>
+</Base>

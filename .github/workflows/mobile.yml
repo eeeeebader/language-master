@@ -1,0 +1,106 @@
+name: Mobile builds
+
+# Store releases are manual promotions: this workflow uploads to TestFlight and the Play internal
+# track. Jobs are skipped until the signing secrets exist (MOBILE_SECRETS_READY=true as a repo var).
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  web:
+    name: build client bundle
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: corepack enable && corepack prepare --activate
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @lm/client build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: client-dist
+          path: apps/client/dist
+
+  ios:
+    name: iOS → TestFlight
+    needs: web
+    if: vars.MOBILE_SECRETS_READY == 'true'
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: corepack enable && corepack prepare --activate
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@v4
+        with:
+          name: client-dist
+          path: apps/client/dist
+      - name: Capacitor sync
+        working-directory: apps/client
+        run: |
+          test -d ios || pnpm exec cap add ios
+          pnpm exec cap sync ios
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: false
+      - run: gem install fastlane -N
+      - name: Fastlane beta (match + pilot)
+        working-directory: apps/client/ios/App
+        env:
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}
+          MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+        run: fastlane ios beta
+
+  android:
+    name: Android → Play internal
+    needs: web
+    if: vars.MOBILE_SECRETS_READY == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - run: corepack enable && corepack prepare --activate
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@v4
+        with:
+          name: client-dist
+          path: apps/client/dist
+      - name: Capacitor sync
+        working-directory: apps/client
+        run: |
+          test -d android || pnpm exec cap add android
+          pnpm exec cap sync android
+      - name: Decode keystore
+        run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > apps/client/android/release.keystore
+      - name: Build AAB
+        working-directory: apps/client/android
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./gradlew bundleRelease
+      - uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: app.languagemaster.client
+          releaseFiles: apps/client/android/app/build/outputs/bundle/release/app-release.aab
+          track: internal
+          status: completed

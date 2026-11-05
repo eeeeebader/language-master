@@ -5,14 +5,25 @@
   "packageManager": "pnpm@12.16.1",
   "scripts": {
     "dev": "pnpm --filter @lm/client dev",
+    "dev:api": "pnpm --filter @lm/api dev",
+    "dev:admin": "pnpm --filter @lm/admin dev",
+    "dev:site": "pnpm --filter @lm/site dev",
     "build": "pnpm -r build",
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",
     "lint": "biome check .",
-    "lint:fix": "biome check --write ."
+    "lint:fix": "biome check --write .",
+    "db:migrate": "pnpm --filter @lm/api migrate",
+    "content:validate": "pnpm --filter @lm/content-tools validate-lectures",
+    "content:pack": "pnpm --filter @lm/content-tools build-pack",
+    "content:audio": "pnpm --filter @lm/content-tools render-audio"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.5",
     "typescript": "5.9.3"
+  },
+  "engines": {
+    "node": ">=22.5",
+    "pnpm": ">=10"
   }
 }

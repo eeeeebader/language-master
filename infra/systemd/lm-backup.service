@@ -1,0 +1,7 @@
+[Unit]
+Description=Language Master nightly Postgres backup
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/language-master/backup.env
+ExecStart=/opt/language-master/infra/scripts/backup.sh

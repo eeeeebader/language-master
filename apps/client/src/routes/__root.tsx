@@ -6,6 +6,7 @@ import { db } from "@/db/db";
 import { useSettings } from "@/hooks/useSettings";
 import { setHaptics } from "@/lib/haptics";
 import { setMuted } from "@/lib/sound";
+import { startSyncScheduler } from "@/lib/sync";
 
 export const Route = createRootRoute({ component: Root });
 
@@ -23,6 +24,9 @@ function Root() {
         if (!(await db.stories.get(s.id))) await db.stories.put({ ...s, archived: false });
     })();
   }, []);
+
+  // Outbox sync: no-op in local-only mode (no VITE_SUPABASE_URL / VITE_API_URL).
+  useEffect(() => startSyncScheduler(), []);
 
   useEffect(() => {
     if (!settings) return;

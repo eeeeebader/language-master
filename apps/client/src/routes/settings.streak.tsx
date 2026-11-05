@@ -86,6 +86,8 @@ function StreakSettings() {
             count: a.reviews + a.lecturesDone * 5 + a.storiesRead * 5,
           }))}
           learningDays={s.learningDays}
+          since={s.createdAt.slice(0, 10)}
+          vacationUntil={s.vacationUntil}
         />
       </Card>
 

@@ -108,6 +108,8 @@ function Profile() {
             count: a.reviews + a.lecturesDone * 5 + a.storiesRead * 5,
           }))}
           learningDays={settings.learningDays}
+          since={settings.createdAt.slice(0, 10)}
+          vacationUntil={settings.vacationUntil}
         />
       </Card>
 

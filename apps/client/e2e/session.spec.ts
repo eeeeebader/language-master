@@ -28,7 +28,7 @@ test("progressive mode asks multiple choice first", async ({ page }) => {
   await expect(page).toHaveURL(/karteikarten\/practice/);
   await page.getByText("Auswahl & Tippen", { exact: true }).click();
   await page.getByRole("button", { name: "Starten" }).click();
-  await expect(page.getByText("Auswahl", { exact: true })).toBeVisible();
+  await expect(page.getByText(/^Auswahl\s*1\/4$/)).toBeVisible();
   // four answer buttons under the card
   const choices = page.locator("main button.rounded-chip.bg-paper-2");
   await expect(choices).toHaveCount(4);

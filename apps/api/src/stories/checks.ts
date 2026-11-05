@@ -10,6 +10,123 @@ export interface CoverageCheck {
   feedback: string | null;
 }
 
+/**
+ * Core function words and the few verbs every A1 text needs. They count as known for the
+ * coverage score even before the learner has them on a card ("basic filler words are fine
+ * wherever natural").
+ */
+export const BASELINE_LEMMAS: Record<string, readonly string[]> = {
+  es: [
+    "el",
+    "la",
+    "los",
+    "las",
+    "un",
+    "una",
+    "unos",
+    "unas",
+    "al",
+    "del",
+    "y",
+    "o",
+    "pero",
+    "que",
+    "de",
+    "a",
+    "en",
+    "con",
+    "por",
+    "para",
+    "sin",
+    "sobre",
+    "yo",
+    "tú",
+    "él",
+    "ella",
+    "usted",
+    "nosotros",
+    "vosotros",
+    "ellos",
+    "ellas",
+    "me",
+    "te",
+    "se",
+    "nos",
+    "os",
+    "le",
+    "les",
+    "lo",
+    "mi",
+    "tu",
+    "su",
+    "mis",
+    "tus",
+    "sus",
+    "este",
+    "esta",
+    "ese",
+    "esa",
+    "esto",
+    "eso",
+    "aquí",
+    "allí",
+    "ahora",
+    "hoy",
+    "mañana",
+    "muy",
+    "más",
+    "menos",
+    "también",
+    "no",
+    "sí",
+    "ya",
+    "siempre",
+    "nunca",
+    "bien",
+    "mal",
+    "ser",
+    "estar",
+    "tener",
+    "haber",
+    "ir",
+    "hacer",
+    "poder",
+    "querer",
+    "decir",
+    "ver",
+    "dar",
+    "hay",
+    "cómo",
+    "qué",
+    "quién",
+    "dónde",
+    "cuándo",
+    "cuánto",
+    "porque",
+    "entonces",
+    "después",
+    "uno",
+    "dos",
+    "tres",
+    "cuatro",
+    "cinco",
+    "seis",
+    "siete",
+    "ocho",
+    "nueve",
+    "diez",
+    "hola",
+    "gracias",
+    "adiós",
+    "favor",
+    "señor",
+    "señora",
+  ],
+};
+
+/** Below this many known lemmas the learner is a beginner: the coverage target is capped. */
+export const BEGINNER_KNOWN_LEMMAS = 40;
+
 /** Only hard failures retry: coverage more than ~5 points off, or none of the failed words used when some were requested. */
 export function checkStory(
   doc: StoryDocument,
@@ -18,7 +135,10 @@ export function checkStory(
   failedLemmas: readonly string[],
   tolerance = 0.05,
 ): CoverageCheck {
-  const known = new Set(knownLemmas.map(normaliseAnswer));
+  const known = new Set(
+    [...knownLemmas, ...(BASELINE_LEMMAS[request.language] ?? [])].map(normaliseAnswer),
+  );
+  const beginner = knownLemmas.length < BEGINNER_KNOWN_LEMMAS;
   const failedSet = new Set(failedLemmas.map(normaliseAnswer));
   let total = 0;
   let covered = 0;
@@ -33,10 +153,13 @@ export function checkStory(
         if (failedSet.has(l)) usedFailed.add(t.lemma);
       }
   const coverage = total ? covered / total : 1;
-  const target = 1 - request.novelty;
+  // Beginners cannot reach 90 % with 15 words: cap the target and never fail for "too few new words".
+  const target = beginner
+    ? Math.min(1 - request.novelty, 0.5 + knownLemmas.length / 100)
+    : 1 - request.novelty;
   const deviation = coverage - target;
   const problems: string[] = [];
-  if (Math.abs(deviation) > tolerance) {
+  if (Math.abs(deviation) > tolerance && !(beginner && deviation > 0)) {
     problems.push(
       deviation > 0
         ? `The story uses too few new words (coverage ${pct(coverage)} vs target ${pct(target)}); add more unseen words.`

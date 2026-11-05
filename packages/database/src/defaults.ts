@@ -4,7 +4,7 @@ export const APP_SETTINGS_DEFAULTS: Record<string, unknown> = {
   "stories.max_per_day": 10,
   "stories.free_active_limit": 2,
   "stories.premium_archive_limit": 50,
-  "llm.provider": "anthropic", // anthropic | openai
+  "llm.provider": "anthropic", // anthropic | openai | fake (dev only, no cost)
   "llm.model.write": "claude-haiku-5-5",
   "llm.model.notes": "claude-haiku-5-5",
   "llm.model.openai": "gpt-5-mini",

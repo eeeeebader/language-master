@@ -104,6 +104,22 @@ make check        # validate all compose files
 
 See `docs/infra.md` for the production topology and deploy flow.
 
+## Local stack (sign-in, sync, story generation)
+
+```bash
+make keys > /tmp/keys.env                      # Supabase secrets
+cp infra/supabase/.env.example infra/supabase/.env   # paste the keys, set KONG_HTTP_PORT=8100, SITE_URL=http://localhost:5173, SMTP_HOST=mail
+cd infra/supabase && docker compose --env-file .env -f docker-compose.yml -f docker-compose.local.yml up -d
+docker build -t lm-nlp:dev apps/nlp && docker run -d --name lm-nlp-dev -p 127.0.0.1:8001:8080 lm-nlp:dev
+cp apps/api/.env.example apps/api/.env         # DATABASE_URL via the pooler on 55432, JWT secret, NLP_URL, LLM keys
+cp apps/client/.env.example apps/client/.env.local   # VITE_SUPABASE_URL=http://localhost:8100, anon key, VITE_API_URL=http://localhost:8787
+pnpm dev:api && pnpm dev
+```
+
+`docker-compose.local.yml` prefixes container names and remaps ports so the stack can run next to
+another Supabase on the same machine, and adds Inbucket on http://localhost:9100 for magic-link
+mails. `LLM_PROVIDER=fake` runs the whole story pipeline deterministically without an API key.
+
 Native shells: `pnpm --filter @lm/client exec cap add ios|android` then `pnpm --filter @lm/client cap:sync`.
 
 ## Design

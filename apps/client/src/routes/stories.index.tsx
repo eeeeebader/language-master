@@ -6,8 +6,11 @@ import { useState } from "react";
 import { Button, Card, Chip, Page, ProgressBar } from "@/components/ui";
 import { GRAMMAR_FOCI_ES, THEME_LABELS } from "@/data/stories-es";
 import { db } from "@/db/db";
+import { isCloudEnabled } from "@/lib/auth";
 import { computeCoverage } from "@/lib/coverage";
 import { t } from "@/lib/i18n";
+import { play } from "@/lib/sound";
+import { GENERATE_ERRORS, generateStory } from "@/lib/stories";
 
 export const Route = createFileRoute("/stories/")({ component: Stories });
 
@@ -31,6 +34,34 @@ function Stories() {
   const [grammar, setGrammar] = useState(GRAMMAR_FOCI_ES[0] as string);
   const [sources, setSources] = useState<Set<string>>(new Set());
   const expectedNew = Math.round(([350, 750, 1200][length - 1] as number) * novelty * 0.6);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function generate() {
+    setBusy(true);
+    setError(null);
+    const r = await generateStory({
+      language: "es",
+      native: "de",
+      novelty,
+      failedWords: failed,
+      pickedFailed: [],
+      level,
+      length,
+      theme,
+      grammarFocus: grammar,
+      sourceLists: [...sources],
+    });
+    setBusy(false);
+    if (r.ok) {
+      play("levelup");
+      navigate({ to: "/stories/$storyId", params: { storyId: r.storyId } });
+    } else {
+      const key =
+        r.error === "generation_failed" && r.refunded ? "generation_failed_refunded" : r.error;
+      setError(GENERATE_ERRORS[key] ?? `${r.error}${r.reason ? `: ${r.reason}` : ""}`);
+    }
+  }
 
   return (
     <Page title={t("stories.title")}>
@@ -81,9 +112,11 @@ function Stories() {
       <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-ink-3">
         {t("stories.new")}
       </h2>
-      <Card tone="sky" className="mb-3 border-transparent text-sm">
-        <Sparkle className="mr-1 inline" /> {t("stories.offlineNote")}
-      </Card>
+      {!isCloudEnabled && (
+        <Card tone="sky" className="mb-3 border-transparent text-sm">
+          <Sparkle className="mr-1 inline" /> {t("stories.offlineNote")}
+        </Card>
+      )}
 
       <Card className="mb-3">
         <div className="flex items-center justify-between">
@@ -183,8 +216,11 @@ function Stories() {
         </div>
       </Card>
 
-      <Button full size="lg" disabled title="Benötigt den Server (Version 0.2)">
-        <Sparkle /> {t("stories.generate")}
+      {error && (
+        <p className="mb-2 rounded-card bg-rose-soft p-3 text-sm text-rose-deep">{error}</p>
+      )}
+      <Button full size="lg" disabled={!isCloudEnabled || busy} onClick={generate}>
+        <Sparkle /> {busy ? "Wird erstellt …" : t("stories.generate")}
       </Button>
     </Page>
   );

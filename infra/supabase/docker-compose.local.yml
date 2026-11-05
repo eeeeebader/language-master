@@ -1,0 +1,42 @@
+# Local development override: run this project's Supabase next to another Supabase stack on the
+# same machine. Prefixed container names, remapped host ports, Inbucket for magic-link mails.
+#   docker compose --env-file .env -f docker-compose.yml -f docker-compose.local.yml up -d
+services:
+  studio:
+    container_name: lm-supabase-studio
+  kong:
+    container_name: lm-supabase-kong
+  auth:
+    container_name: lm-supabase-auth
+    environment:
+      GOTRUE_SMTP_USER: ""
+      GOTRUE_SMTP_PASS: ""
+  rest:
+    container_name: lm-supabase-rest
+  realtime:
+    container_name: lm-supabase-realtime
+    networks:
+      default:
+        aliases:
+          - realtime-dev.supabase-realtime
+  storage:
+    container_name: lm-supabase-storage
+  imgproxy:
+    container_name: lm-supabase-imgproxy
+  meta:
+    container_name: lm-supabase-meta
+  functions:
+    container_name: lm-supabase-edge-functions
+  db:
+    container_name: lm-supabase-db
+  supavisor:
+    container_name: lm-supabase-pooler
+    ports: !override
+      - ${LOCAL_POSTGRES_PORT:-55432}:5432
+      - ${LOCAL_POOLER_PORT:-56543}:6543
+  mail:
+    container_name: lm-supabase-mail
+    image: inbucket/inbucket:3.0.3
+    restart: unless-stopped
+    ports:
+      - ${LOCAL_MAIL_WEB_PORT:-9100}:9000

@@ -5,6 +5,13 @@ import { closeDb, getDb, runMigrations } from "./db";
 import { loadEnv } from "./env";
 import { log } from "./lib/log";
 
+// Local development: read apps/api/.env when present (containers get their env from compose).
+try {
+  process.loadEnvFile(".env");
+} catch {
+  /* no .env file */
+}
+
 const env = loadEnv();
 const { db, sql } = getDb(env.DATABASE_URL);
 const state = { migrated: false, version: process.env.npm_package_version ?? "0.1.0" };

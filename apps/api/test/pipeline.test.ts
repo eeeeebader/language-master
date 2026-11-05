@@ -143,11 +143,13 @@ describe("story pipeline (golden)", () => {
         return { output: WRITTEN, usage: { model: "fake", tokensIn: 1, tokensOut: 1 } };
       },
     });
-    // learner knows nothing: coverage ~0 vs target 0.9
+    // an advanced learner (not a beginner) whose 60 known words do not appear in the text:
+    // coverage stays far below the 90 % target, so the pipeline retries once and gives up
+    const unrelated = Array.from({ length: 60 }, (_, i) => `palabra${i}`);
     const result = await createPipeline(
       llm,
       annotate,
-    )({ storyId: "st2", request, knownLemmas: [], failedLemmas: [] });
+    )({ storyId: "st2", request, knownLemmas: unrelated, failedLemmas: [] });
     expect(result.ok).toBe(false);
     expect(calls).toBe(2);
     expect(lastPrompt).toContain("Revision feedback");

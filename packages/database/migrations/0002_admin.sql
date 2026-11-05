@@ -79,23 +79,26 @@ create or replace view public.revenue as
 with recent as (
   select * from public.token_ledger where created_at > now() - interval '30 days'
 ),
-settings as (
+s as (
   select
     coalesce((select (value_json ->> 'premium_cents')::int from public.app_settings where key = 'prices'), 1299) as premium_cents,
     coalesce((select (value_json ->> 'tokens_10_cents')::int from public.app_settings where key = 'prices'), 299) as tokens_10_cents,
     coalesce((select (value_json ->> 'tokens_50_cents')::int from public.app_settings where key = 'prices'), 999) as tokens_50_cents
+),
+pack_cents as (
+  select
+    r.ref_id, r.reason, r.delta,
+    case when abs(r.delta) = 10 then s.tokens_10_cents when abs(r.delta) = 50 then s.tokens_50_cents else 0 end as cents
+  from recent r cross join s
 )
 select
-  coalesce((select sum(case when delta = 10 then tokens_10_cents when delta = 50 then tokens_50_cents else 0 end)
-            from recent, settings where reason = 'purchase' and ref_id like 'stripe:%'), 0)::int
-    + coalesce((select count(*) * premium_cents from recent, settings where reason = 'premium' and ref_id like 'stripe:%'), 0)::int
+  coalesce((select sum(cents) from pack_cents where reason = 'purchase' and ref_id like 'stripe:%'), 0)::int
+    + (select count(*) from recent where reason = 'premium' and ref_id like 'stripe:%')::int * (select premium_cents from s)
     as stripe_cents_30d,
-  coalesce((select sum(case when delta = 10 then tokens_10_cents when delta = 50 then tokens_50_cents else 0 end)
-            from recent, settings where reason = 'purchase' and (ref_id like 'apple:%' or ref_id like 'google:%')), 0)::int
-    + coalesce((select count(*) * premium_cents from recent, settings where reason = 'premium' and (ref_id like 'apple:%' or ref_id like 'google:%')), 0)::int
+  coalesce((select sum(cents) from pack_cents where reason = 'purchase' and (ref_id like 'apple:%' or ref_id like 'google:%')), 0)::int
+    + (select count(*) from recent where reason = 'premium' and (ref_id like 'apple:%' or ref_id like 'google:%'))::int * (select premium_cents from s)
     as iap_cents_30d,
-  coalesce((select sum(case when delta = -10 then tokens_10_cents when delta = -50 then tokens_50_cents else 0 end)
-            from recent, settings where reason = 'chargeback'), 0)::int as refunds_cents_30d,
+  coalesce((select sum(cents) from pack_cents where reason = 'chargeback'), 0)::int as refunds_cents_30d,
   coalesce((select sum(delta) from recent where reason = 'purchase'), 0)::int as tokens_sold_30d,
   coalesce((select sum(delta) from recent where reason = 'support'), 0)::int as supporters_cents_30d;
 

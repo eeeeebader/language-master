@@ -54,36 +54,28 @@ export function createApp(db: Db, env: Env, state: AppState) {
   app.route("/account", accountRoutes(db, env));
 
   // LLM config is read lazily so admin changes apply without restart.
-  const pipeline = async (input: Parameters<ReturnType<typeof createPipeline>>[0]) => {
+  // LLM config: env overrides win, else admin app_settings; read lazily so admin changes apply.
+  const llmConfig = async () => {
     const s = await settings.all();
-    const provider = (s["llm.provider"] as "anthropic" | "openai") ?? "anthropic";
-    const llm = createLlm({
+    const provider =
+      env.LLM_PROVIDER ?? ((s["llm.provider"] as "anthropic" | "openai" | "fake") || "anthropic");
+    const openaiModel = env.LLM_MODEL_OPENAI ?? String(s["llm.model.openai"]);
+    return createLlm({
       provider,
       writeModel:
-        provider === "openai" ? String(s["llm.model.openai"]) : String(s["llm.model.write"]),
+        provider === "openai" ? openaiModel : (env.LLM_MODEL_WRITE ?? String(s["llm.model.write"])),
       notesModel:
-        provider === "openai" ? String(s["llm.model.openai"]) : String(s["llm.model.notes"]),
+        provider === "openai" ? openaiModel : (env.LLM_MODEL_NOTES ?? String(s["llm.model.notes"])),
       anthropicKey: env.ANTHROPIC_API_KEY,
       openaiKey: env.OPENAI_API_KEY,
     });
-    return createPipeline(llm, createAnnotator(env.NLP_URL))(input);
   };
+  const pipeline = async (input: Parameters<ReturnType<typeof createPipeline>>[0]) =>
+    createPipeline(await llmConfig(), createAnnotator(env.NLP_URL))(input);
   app.route("/stories", storyRoutes({ db, settings, limiter, pipeline }));
 
-  const annotateOfficial: ReturnType<typeof createOfficialAnnotator> = async (input, now) => {
-    const s = await settings.all();
-    const provider = (s["llm.provider"] as "anthropic" | "openai") ?? "anthropic";
-    const llm = createLlm({
-      provider,
-      writeModel:
-        provider === "openai" ? String(s["llm.model.openai"]) : String(s["llm.model.write"]),
-      notesModel:
-        provider === "openai" ? String(s["llm.model.openai"]) : String(s["llm.model.notes"]),
-      anthropicKey: env.ANTHROPIC_API_KEY,
-      openaiKey: env.OPENAI_API_KEY,
-    });
-    return createOfficialAnnotator(llm, createAnnotator(env.NLP_URL))(input, now);
-  };
+  const annotateOfficial: ReturnType<typeof createOfficialAnnotator> = async (input, now) =>
+    createOfficialAnnotator(await llmConfig(), createAnnotator(env.NLP_URL))(input, now);
   app.route("/admin", adminRoutes({ db, settings, annotateOfficial }));
 
   app.notFound((c) => c.json({ error: "not found" }, 404));

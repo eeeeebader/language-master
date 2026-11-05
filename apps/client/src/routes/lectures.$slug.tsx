@@ -11,6 +11,7 @@ import { addDictionaryWord, markLectureDone } from "@/db/repo";
 import { getEntryByLemma, variantOptions } from "@/lib/dictionary";
 import { t } from "@/lib/i18n";
 import { play } from "@/lib/sound";
+import { track } from "@/lib/telemetry";
 
 export const Route = createFileRoute("/lectures/$slug")({ component: LectureView });
 
@@ -32,6 +33,7 @@ function LectureView() {
   async function complete() {
     if (!lecture) return;
     await markLectureDone(lecture.id);
+    track("lecture_done", { lecture: lecture.slug });
     play("levelup");
     navigate({ to: "/lectures" });
   }

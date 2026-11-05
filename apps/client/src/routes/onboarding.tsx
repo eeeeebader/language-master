@@ -13,6 +13,7 @@ import {
 import { usePackState } from "@/hooks/usePack";
 import { variantOptions } from "@/lib/dictionary";
 import { t } from "@/lib/i18n";
+import { track } from "@/lib/telemetry";
 
 export const Route = createFileRoute("/onboarding")({ component: Onboarding });
 
@@ -66,6 +67,7 @@ function Onboarding() {
       await createSettings({ username: name.trim() || "Lernende*r", isOver16: true });
     await saveSettings({ onboardingDone: true });
     const list = await createStarterList();
+    track("onboarding_completed", { skipped_session: !startSession });
     if (startSession)
       navigate({
         to: "/karteikarten/session",

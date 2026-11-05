@@ -6,6 +6,7 @@ import { createOfficialAnnotator } from "./admin/official";
 import { requireUser } from "./auth";
 import type { Env } from "./env";
 import { GenerationLimiter } from "./lib/rateLimit";
+import { captureException } from "./lib/sentry";
 import { accountRoutes } from "./routes/account";
 import { adminRoutes } from "./routes/admin";
 import { billingRoutes } from "./routes/billing";
@@ -97,6 +98,7 @@ export function createApp(db: Db, env: Env, state: AppState) {
   app.notFound((c) => c.json({ error: "not found" }, 404));
   app.onError((err, c) => {
     console.error(err);
+    captureException(err, { path: c.req.path, method: c.req.method });
     return c.json({ error: "internal" }, 500);
   });
   return app;

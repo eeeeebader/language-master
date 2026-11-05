@@ -14,6 +14,7 @@ import { computeCoverage } from "@/lib/coverage";
 import { t } from "@/lib/i18n";
 import { play } from "@/lib/sound";
 import { GENERATE_ERRORS, generateStory } from "@/lib/stories";
+import { track } from "@/lib/telemetry";
 
 const Search = z.object({ checkout: z.enum(["success", "cancel"]).optional() });
 
@@ -93,6 +94,13 @@ function Stories() {
       sourceLists: [...sources],
     });
     setBusy(false);
+    track("story_generated", {
+      ok: r.ok,
+      payment: r.ok ? r.payment : undefined,
+      error: r.ok ? undefined : r.error,
+      level,
+      length,
+    });
     if (r.ok) {
       play("levelup");
       refresh();

@@ -17,6 +17,7 @@
     "@lm/database": "workspace:*",
     "@lm/schema": "workspace:*",
     "@lm/srs": "workspace:*",
+    "@sentry/node": "11.11.0",
     "ai": "7.0.163",
     "drizzle-orm": "0.45.4",
     "hono": "4.13.16",

@@ -1,5 +1,6 @@
 import { ArrowLeft, CaretRight } from "@phosphor-icons/react";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
 import { Card, Page, Toggle } from "@/components/ui";
 import { saveSettings } from "@/db/repo";
 import { useAudioState } from "@/hooks/useAudio";
@@ -8,6 +9,7 @@ import { useSettings } from "@/hooks/useSettings";
 import { installAudio, removeAudio } from "@/lib/audio-pack";
 import { ensurePack, removePack } from "@/lib/dict-pack";
 import { t } from "@/lib/i18n";
+import { analyticsAvailable, analyticsOptedOut, setAnalyticsOptOut } from "@/lib/telemetry";
 
 export const Route = createFileRoute("/settings/")({ component: Settings });
 
@@ -32,6 +34,7 @@ function Settings() {
   const s = useSettings();
   const pack = usePackState();
   const audio = useAudioState();
+  const [analyticsOn, setAnalyticsOn] = useState(!analyticsOptedOut());
   const mb = (b?: number) => (b ? `${(b / 1_048_576).toFixed(1)} MB` : "");
   if (!s) return null;
   return (
@@ -54,6 +57,17 @@ function Settings() {
           checked={s.hapticsOn}
           onChange={(v) => saveSettings({ hapticsOn: v })}
         />
+        {analyticsAvailable && (
+          <Toggle
+            label="Nutzungsanalyse"
+            hint="Pseudonymisierte Ereignisse (z. B. „Sitzung beendet“), EU-Server, keine Werbe-IDs"
+            checked={analyticsOn}
+            onChange={(v) => {
+              setAnalyticsOn(v);
+              setAnalyticsOptOut(!v);
+            }}
+          />
+        )}
         <div className="flex items-center justify-between py-3">
           <span className="font-medium">{t("settings.dailyNew")}</span>
           <input

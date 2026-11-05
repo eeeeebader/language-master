@@ -29,6 +29,7 @@ const Env = z.object({
     .default("true")
     .transform((v) => v !== "false"),
   CORS_ORIGINS: z.string().default("http://localhost:5173"),
+  SENTRY_DSN: z.string().optional(),
 });
 
 export type Env = z.infer<typeof Env>;

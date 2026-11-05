@@ -13,6 +13,7 @@ import { computeCoverage, storyLemmas } from "@/lib/coverage";
 import { getEntryByLemma } from "@/lib/dictionary";
 import { t } from "@/lib/i18n";
 import { play } from "@/lib/sound";
+import { track } from "@/lib/telemetry";
 import { speak } from "@/lib/tts";
 
 export const Route = createFileRoute("/stories/$storyId")({ component: Reader });
@@ -130,6 +131,7 @@ function Reader() {
 
   async function finish() {
     await markStoryFinished(storyId);
+    track("story_read", { source: story?.source ?? "official" });
     play("done");
     setShowSummary(true);
   }

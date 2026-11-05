@@ -13,6 +13,7 @@ import { setHaptics } from "@/lib/haptics";
 import { rescheduleNotifications } from "@/lib/notifications";
 import { setMuted } from "@/lib/sound";
 import { startSyncScheduler } from "@/lib/sync";
+import { identify, track } from "@/lib/telemetry";
 
 export const Route = createRootRoute({ component: Root });
 
@@ -28,7 +29,11 @@ function Root() {
     const run = () => checkConsent().catch(() => undefined);
     run();
     const offAuth = onAuthChange((s) => {
-      if (s) run();
+      identify(s?.user.id ?? null);
+      if (s) {
+        run();
+        track("signed_in", {});
+      }
     });
     const offPending = onPendingConsent((p) => {
       if (p.length > 0 && window.location.pathname !== "/consent") navigate({ to: "/consent" });

@@ -4,6 +4,7 @@ import { startCron } from "./cron";
 import { closeDb, getDb, runMigrations } from "./db";
 import { loadEnv } from "./env";
 import { log } from "./lib/log";
+import { initSentry } from "./lib/sentry";
 
 // Local development: read apps/api/.env when present (containers get their env from compose).
 try {
@@ -15,6 +16,7 @@ try {
 const env = loadEnv();
 const { db, sql } = getDb(env.DATABASE_URL);
 const state = { migrated: false, version: process.env.npm_package_version ?? "0.1.0" };
+if (initSentry(env.SENTRY_DSN, state.version, env.NODE_ENV)) log.info("sentry enabled");
 
 if (env.RUN_MIGRATIONS) {
   const applied = await runMigrations(sql);

@@ -10,6 +10,7 @@ import initSqlJs, { type Database, type SqlJsStatic } from "sql.js";
 import sqlWasmUrl from "sql.js/dist/sql-wasm.wasm?url";
 import { db } from "@/db/db";
 import { API_URL } from "./auth";
+import { track } from "./telemetry";
 
 export type PackState =
   | { status: "none" }
@@ -139,6 +140,7 @@ export async function installPack(manifest: PackManifest): Promise<void> {
       installedAt: new Date().toISOString(),
     });
     await openBytes(bytes, manifest.version);
+    track("pack_installed", { kind: "dictionary", version: manifest.version });
   } catch (e) {
     set({ status: "error", message: e instanceof Error ? e.message : String(e) });
   }

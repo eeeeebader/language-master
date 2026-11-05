@@ -78,7 +78,11 @@ Server side and tooling (v0.2, scaffolded):
   blocks the signed-in app until accepted, the onboarding consent is carried over when versions
   match, and the legal pages show the served version.
 
-Still open: Sentry and PostHog, Playwright smoke tests, store configuration (RevenueCat products,
+- **Observability**: Sentry (EU DSN) in client, admin and API with source maps uploaded on CI
+  builds, and PostHog Cloud EU product analytics with typed events (`packages/schema/src/events.ts`),
+  pseudonymous ids, no session recording and an in-app opt-out. All inert without keys.
+
+Still open: Playwright smoke tests, a Grafana dashboard, store configuration (RevenueCat products,
 signing) and store releases.
 
 ## Repo layout

@@ -31,6 +31,7 @@ import { t } from "@/lib/i18n";
 import { maybeAskPermission, rescheduleNotifications } from "@/lib/notifications";
 import { buildSession, type Direction, newCardsSeenToday } from "@/lib/session-builder";
 import { play } from "@/lib/sound";
+import { track } from "@/lib/telemetry";
 
 const Search = z.object({
   mode: z.enum(["classic", "reaction", "progressive", "forever"]).default("reaction"),
@@ -129,6 +130,7 @@ function Session() {
       }
       setState(createSession(cards, { mode }, Date.now()));
       setStage("front");
+      track("session_started", { mode, cards: cards.length });
     })();
   }, []);
 

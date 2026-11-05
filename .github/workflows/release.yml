@@ -25,6 +25,14 @@ jobs:
       - run: corepack enable && corepack prepare --activate
       - run: pnpm install --frozen-lockfile
       - run: pnpm -r build
+        env:
+          # Source maps go to Sentry when the token exists; DSN and PostHog key are baked into the client bundle.
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+          SENTRY_PROJECT_CLIENT: ${{ vars.SENTRY_PROJECT_CLIENT }}
+          VITE_SENTRY_DSN: ${{ vars.VITE_SENTRY_DSN }}
+          VITE_POSTHOG_KEY: ${{ vars.VITE_POSTHOG_KEY }}
+          VITE_POSTHOG_HOST: https://eu.i.posthog.com
       - uses: actions/upload-artifact@v4
         with:
           name: web-dist

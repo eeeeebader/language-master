@@ -9,6 +9,7 @@ import {
   restorePurchases,
   startCheckout,
 } from "@/lib/billing";
+import { track } from "@/lib/telemetry";
 import { Button, Card, Chip, Sheet } from "./ui";
 
 export function PurchaseSheet({
@@ -31,6 +32,7 @@ export function PurchaseSheet({
   async function buy(product: Product, amount?: number) {
     setBusy(product);
     setError(null);
+    track("purchase_started", { product, channel: isNativeApp ? "store" : "stripe" });
     const r = await startCheckout(product, amount);
     setBusy(null);
     if (r.ok && r.url) window.location.href = r.url;

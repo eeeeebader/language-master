@@ -12,5 +12,22 @@ minimumReleaseAgeExclude:
   - '@tanstack/react-query@5.106.1'
   - ai@7.0.163
   - '@revenuecat/purchases-capacitor@14.1.0'
+  - '@posthog/browser-common@0.10.7'
+  - '@posthog/core@1.64.0'
+  - '@posthog/types@1.421.0'
+  - '@sentry/browser-utils@11.11.0'
+  - '@sentry/browser@11.11.0'
+  - '@sentry/core@11.11.0'
+  - '@sentry/feedback@11.11.0'
+  - '@sentry/react@11.11.0'
+  - '@sentry/replay-canvas@11.11.0'
+  - '@sentry/replay@11.11.0'
+  - posthog-js@1.447.0
+  - '@sentry/bundler-plugins@11.11.0'
+  - '@sentry/vite-plugin@11.11.0'
+  - '@sentry/node@11.11.0'
+  - '@sentry/opentelemetry@11.11.0'
+  - '@sentry/server-runtime-injection@11.11.0'
+  - '@sentry/server-utils@11.11.0'
 allowBuilds:
   esbuild: true

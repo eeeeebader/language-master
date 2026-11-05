@@ -30,7 +30,7 @@ Stand: [Datum], Version 1
 ## 2. Welche Daten wir verarbeiten und warum
 In dieser Version (0.1) werden alle Daten ausschließlich lokal auf deinem Gerät gespeichert. Es findet keine Übertragung an einen Server statt.
 
-Geplant für spätere Versionen: Konto und Anmeldung (Benutzername, E-Mail, Anmeldeweg, Bestätigung „mindestens 16“), Lernfunktion (Listen, Lernfortschritt, Geschichten), Erstellung von Geschichten (Lemma-Listen und Einstellungen, keine Namen), Käufe (Transaktions-IDs; Zahlungsdaten nur bei Stripe, Apple, Google), Sicherheit und Fehlerbehebung (gekürzte IP, Gerätetyp, App-Version; 30 Tage).
+Geplant für spätere Versionen: Konto und Anmeldung (Benutzername, E-Mail, Anmeldeweg, Bestätigung „mindestens 16“), Lernfunktion (Listen, Lernfortschritt, Geschichten), Erstellung von Geschichten (Lemma-Listen und Einstellungen, keine Namen), Käufe (Transaktions-IDs; Zahlungsdaten nur bei Stripe, Apple, Google), Sicherheit und Fehlerbehebung (Fehlerberichte an Sentry, EU-Region: gekürzte IP, Gerätetyp, App-Version; 30 Tage), Nutzungsanalyse (PostHog Cloud EU: pseudonymisierte Ereignisse wie „Sitzung beendet“, keine Werbe-IDs, abschaltbar unter Einstellungen).
 
 ## 3. Offline-Daten auf deinem Gerät
 Die App speichert Wörterbuch, Lektionen, Listen und Lernfortschritt lokal, damit sie ohne Internetverbindung funktioniert. Diese Daten löschst du unter Profil → Alle Daten löschen oder durch Deinstallation.

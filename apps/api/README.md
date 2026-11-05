@@ -40,3 +40,10 @@ config change in the admin, not a release.
 - The quota gate debits a token in the same transaction that creates the story row; a failed
   pipeline writes a reverse ledger entry (`refund`), never an in-place update.
 - All prompt inputs are enums and lemma lists; no learner free text reaches the model.
+
+## Admin endpoints
+
+`/admin/*` requires a Supabase JWT whose `app_metadata.role` is `admin` (or `editor` where the
+contract in `apps/admin/README.md` allows it). Every write inserts an `audit_log` row with the
+actor and before/after snapshots. Official texts (`POST /admin/stories/annotate`) run pipeline
+steps 4, 6 and 7 only: spaCy, grammar notes, Zod validation; no quota, no writer call.

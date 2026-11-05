@@ -443,3 +443,49 @@ export const schemaMigrations = pgTable("schema_migrations", {
   name: text("name").primaryKey(),
   appliedAt: timestamp("applied_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+// ---------- admin console (migration 0002) ----------
+
+export const changelog = pgTable(
+  "changelog",
+  {
+    id: text("id").primaryKey(),
+    version: text("version").notNull(),
+    locale: text("locale").notNull().default("de"),
+    markdown: text("markdown").notNull(),
+    publishedAt: timestamp("published_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("changelog_published_idx").on(t.publishedAt)],
+);
+
+export const featureFlags = pgTable("feature_flags", {
+  key: text("key").primaryKey(),
+  enabled: boolean("enabled").notNull().default(false),
+  percentage: smallint("percentage").notNull().default(0),
+  users: jsonb("users").notNull().default([]),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const lemmaOverrides = pgTable(
+  "lemma_overrides",
+  {
+    id: text("id").primaryKey(),
+    language: text("language").notNull(),
+    lemma: text("lemma").notNull(),
+    patch: jsonb("patch").notNull(),
+    updatedBy: uuid("updated_by"),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("lemma_overrides_uq").on(t.language, t.lemma)],
+);
+
+export const languages = pgTable(
+  "languages",
+  {
+    target: text("target").notNull(),
+    native: text("native").notNull(),
+    enabled: boolean("enabled").notNull().default(false),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.target, t.native] })],
+);

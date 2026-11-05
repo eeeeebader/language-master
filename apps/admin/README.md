@@ -30,6 +30,13 @@ the Hono API, which performs the change and the `audit_log` insert in one transa
 
 ## API contract (for apps/api)
 
+Implemented in `apps/api/src/routes/admin.ts` (migration `0002_admin.sql` adds `changelog`,
+`feature_flags`, `lemma_overrides`, `languages` and the three views). Notes on semantics:
+`/admin/dictionary/build` and `/admin/lectures/:id/render-audio` create `jobs` rows with status
+`queued` that the content-tools worker picks up; `/admin/jobs/:id/retry` re-runs retention in
+process and re-queues everything else; `/admin/languages` returns 409 with a reason while the pair
+is not ready.
+
 All endpoints require `Authorization: Bearer <supabase access token>` with role `admin` (or
 `editor` where noted) and respond with JSON. Every mutating endpoint writes
 `audit_log(actor, table, row_id, before, after, at)`.

@@ -1,22 +1,53 @@
 import type { StoryTheme } from "@lm/schema";
-import { BookOpenText, CaretRight, Sparkle } from "@phosphor-icons/react";
+import { Archive, BookOpenText, CaretRight, Coins, Sparkle } from "@phosphor-icons/react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useLiveQuery } from "dexie-react-hooks";
-import { useState } from "react";
-import { Button, Card, Chip, Page, ProgressBar } from "@/components/ui";
+import { useEffect, useState } from "react";
+import { z } from "zod";
+import { PurchaseSheet } from "@/components/PurchaseSheet";
+import { Button, Card, Chip, Page, ProgressBar, Sheet } from "@/components/ui";
 import { GRAMMAR_FOCI_ES, THEME_LABELS } from "@/data/stories-es";
 import { db } from "@/db/db";
+import { useBilling } from "@/hooks/useBilling";
 import { isCloudEnabled } from "@/lib/auth";
 import { computeCoverage } from "@/lib/coverage";
 import { t } from "@/lib/i18n";
 import { play } from "@/lib/sound";
 import { GENERATE_ERRORS, generateStory } from "@/lib/stories";
 
-export const Route = createFileRoute("/stories/")({ component: Stories });
+const Search = z.object({ checkout: z.enum(["success", "cancel"]).optional() });
+
+export const Route = createFileRoute("/stories/")({ component: Stories, validateSearch: Search });
 
 function Stories() {
   const navigate = useNavigate();
+  const search = Route.useSearch();
+  const { billing, refresh } = useBilling();
   const stories = useLiveQuery(() => db.stories.filter((s) => !s.archived).toArray(), []) ?? [];
+  const archived = useLiveQuery(() => db.stories.filter((s) => s.archived).toArray(), []) ?? [];
+  const [showArchive, setShowArchive] = useState(false);
+  const [purchase, setPurchase] = useState<{ open: boolean; reason?: string }>({ open: false });
+  const [archivePick, setArchivePick] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+  const activeAi = stories.filter((s) => s.source === "ai");
+  const atStoryLimit = activeAi.length >= billing.active_story_limit;
+
+  // Back from Stripe Checkout: the webhook has (or will have) written the entitlement.
+  useEffect(() => {
+    if (!search.checkout) return;
+    if (search.checkout === "success") {
+      setToast("Danke! Dein Kauf wird gutgeschrieben …");
+      refresh();
+      const again = setTimeout(refresh, 4000);
+      return () => clearTimeout(again);
+    }
+    setToast("Kauf abgebrochen.");
+  }, [search.checkout, refresh]);
+  useEffect(() => {
+    if (!toast) return;
+    const tm = setTimeout(() => setToast(null), 3500);
+    return () => clearTimeout(tm);
+  }, [toast]);
   const progress = useLiveQuery(() => db.storyProgress.toArray(), []) ?? [];
   const lists = useLiveQuery(() => db.lists.filter((l) => !l.deletedAt).toArray(), []) ?? [];
   const coverage = useLiveQuery(async () => {
@@ -37,7 +68,16 @@ function Stories() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  async function archive(id: string) {
+    await db.stories.update(id, { archived: true });
+    setArchivePick(false);
+  }
+
   async function generate() {
+    if (atStoryLimit) {
+      setArchivePick(true);
+      return;
+    }
     setBusy(true);
     setError(null);
     const r = await generateStory({
@@ -55,7 +95,11 @@ function Stories() {
     setBusy(false);
     if (r.ok) {
       play("levelup");
+      refresh();
       navigate({ to: "/stories/$storyId", params: { storyId: r.storyId } });
+    } else if (r.error === "no_tokens" || r.error === "daily_free_used") {
+      refresh();
+      setPurchase({ open: true, reason: GENERATE_ERRORS[r.error] });
     } else {
       const key =
         r.error === "generation_failed" && r.refunded ? "generation_failed_refunded" : r.error;
@@ -109,9 +153,72 @@ function Stories() {
         })}
       </div>
 
+      {archived.length > 0 && (
+        <div className="mb-6">
+          <button
+            type="button"
+            className="mb-2 flex items-center gap-1 text-sm font-semibold uppercase tracking-wide text-ink-3"
+            onClick={() => setShowArchive((v) => !v)}
+          >
+            <Archive size={14} /> Archiv ({archived.length}) {showArchive ? "▴" : "▾"}
+          </button>
+          {showArchive &&
+            archived.map((s) => (
+              <Card
+                key={s.id}
+                className="mb-2 flex items-center gap-3"
+                onClick={() => navigate({ to: "/stories/$storyId", params: { storyId: s.id } })}
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="font-bold">{s.title}</div>
+                  <div className="text-sm text-ink-2">
+                    {THEME_LABELS[s.theme] ?? s.theme} ·{" "}
+                    {new Date(s.createdAt).toLocaleDateString("de-DE")}
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    db.stories.update(s.id, { archived: false });
+                  }}
+                >
+                  Wiederherstellen
+                </Button>
+              </Card>
+            ))}
+        </div>
+      )}
+
       <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-ink-3">
         {t("stories.new")}
       </h2>
+      {isCloudEnabled && (
+        <Card className="mb-3 flex items-center gap-3">
+          <Coins size={24} className="text-amber-deep" />
+          <div className="flex-1 text-sm">
+            <div className="font-semibold">
+              {billing.free_left > 0
+                ? `${billing.free_left} freie Geschichte heute`
+                : "Freie Geschichte heute verbraucht"}{" "}
+              · {billing.story_tokens} Tokens
+              {billing.is_premium && (
+                <span className="ml-1 rounded-chip bg-lavender-soft px-2 py-0.5 text-xs text-lavender-deep">
+                  Premium
+                </span>
+              )}
+            </div>
+            <div className="text-ink-2">
+              {activeAi.length}/{billing.active_story_limit} aktive Geschichten
+              {billing.is_premium ? "" : " (kostenlos)"}
+            </div>
+          </div>
+          <Button size="sm" variant="secondary" onClick={() => setPurchase({ open: true })}>
+            {billing.is_premium ? "Tokens" : "Premium"}
+          </Button>
+        </Card>
+      )}
       {!isCloudEnabled && (
         <Card tone="sky" className="mb-3 border-transparent text-sm">
           <Sparkle className="mr-1 inline" /> {t("stories.offlineNote")}
@@ -222,6 +329,54 @@ function Stories() {
       <Button full size="lg" disabled={!isCloudEnabled || busy} onClick={generate}>
         <Sparkle /> {busy ? "Wird erstellt …" : t("stories.generate")}
       </Button>
+
+      <PurchaseSheet
+        open={purchase.open}
+        reason={purchase.reason}
+        billing={billing}
+        onClose={() => setPurchase({ open: false })}
+      />
+
+      <Sheet open={archivePick} onClose={() => setArchivePick(false)} title="Platz schaffen">
+        <p className="mb-3 text-sm text-ink-2">
+          {billing.is_premium
+            ? `Premium hält bis zu ${billing.active_story_limit} Geschichten je Sprache.`
+            : `Kostenlos bleiben ${billing.active_story_limit} Geschichten aktiv. Welche möchtest du archivieren? Premium erweitert das Archiv auf 50 je Sprache.`}
+        </p>
+        <div className="grid gap-2">
+          {activeAi.map((s) => (
+            <Card key={s.id} className="flex items-center gap-3">
+              <div className="flex-1 min-w-0">
+                <div className="font-bold">{s.title}</div>
+                <div className="text-sm text-ink-2">
+                  {new Date(s.createdAt).toLocaleDateString("de-DE")}
+                </div>
+              </div>
+              <Button size="sm" variant="secondary" onClick={() => archive(s.id)}>
+                Archivieren
+              </Button>
+            </Card>
+          ))}
+        </div>
+        {!billing.is_premium && (
+          <Button
+            full
+            variant="ghost"
+            className="mt-3"
+            onClick={() => {
+              setArchivePick(false);
+              setPurchase({ open: true });
+            }}
+          >
+            Premium ansehen
+          </Button>
+        )}
+      </Sheet>
+      {toast && (
+        <div className="fixed bottom-24 left-1/2 z-50 -translate-x-1/2 rounded-chip bg-ink px-4 py-2 text-sm text-paper animate-pop">
+          {toast}
+        </div>
+      )}
     </Page>
   );
 }

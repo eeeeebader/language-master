@@ -3,9 +3,11 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useLiveQuery } from "dexie-react-hooks";
 import { useEffect, useState } from "react";
 import { ActivityCalendar } from "@/components/Charts";
+import { PurchaseSheet } from "@/components/PurchaseSheet";
 import { Button, Card, Page, Stat } from "@/components/ui";
 import { db } from "@/db/db";
 import { exportAll, wipeEverything } from "@/db/repo";
+import { useBilling } from "@/hooks/useBilling";
 import { useSettings } from "@/hooks/useSettings";
 import {
   useActivityDays,
@@ -27,6 +29,8 @@ function Profile() {
   const activity = useActivityDays() ?? [];
   const wordCount = useLiveQuery(() => db.words.filter((w) => !w.deletedAt).count(), []) ?? 0;
   const navigate = useNavigate();
+  const { billing } = useBilling();
+  const [purchase, setPurchase] = useState(false);
 
   async function doExport() {
     const data = await exportAll();
@@ -67,8 +71,22 @@ function Profile() {
         <div>
           <div className="text-xl font-extrabold">{settings.username}</div>
           <div className="text-sm text-ink-2">{t("profile.memberSince", { date: since })}</div>
-          <div className="mt-1 inline-block rounded-chip bg-paper-2 px-2 py-0.5 text-xs font-semibold text-ink-2">
-            {t("profile.free")}
+          <div className="mt-1 flex flex-wrap gap-1">
+            <span
+              className={`inline-block rounded-chip px-2 py-0.5 text-xs font-semibold ${billing.is_premium ? "bg-lavender-soft text-lavender-deep" : "bg-paper-2 text-ink-2"}`}
+            >
+              {billing.is_premium ? "Premium" : t("profile.free")}
+            </span>
+            {billing.is_supporter && (
+              <span className="inline-block rounded-chip bg-rose-soft px-2 py-0.5 text-xs font-semibold text-rose-deep">
+                ♥ Supporter
+              </span>
+            )}
+            {isCloudEnabled && (
+              <span className="inline-block rounded-chip bg-amber-soft px-2 py-0.5 text-xs font-semibold text-amber-deep">
+                {billing.story_tokens} Tokens
+              </span>
+            )}
           </div>
         </div>
       </Card>
@@ -94,6 +112,13 @@ function Profile() {
       </Card>
 
       <AccountCard />
+
+      {isCloudEnabled && (
+        <Button variant="secondary" full className="mb-2" onClick={() => setPurchase(true)}>
+          {billing.is_premium ? "Tokens kaufen · Unterstützen" : "Premium · Tokens · Unterstützen"}
+        </Button>
+      )}
+      <PurchaseSheet open={purchase} billing={billing} onClose={() => setPurchase(false)} />
 
       <div className="grid gap-2">
         <Button variant="secondary" full onClick={() => navigate({ to: "/settings" })}>

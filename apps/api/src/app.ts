@@ -8,6 +8,7 @@ import type { Env } from "./env";
 import { GenerationLimiter } from "./lib/rateLimit";
 import { accountRoutes } from "./routes/account";
 import { adminRoutes } from "./routes/admin";
+import { billingRoutes } from "./routes/billing";
 import { healthRoutes } from "./routes/health";
 import { storyRoutes } from "./routes/stories";
 import { syncRoutes } from "./routes/sync";
@@ -49,9 +50,11 @@ export function createApp(db: Db, env: Env, state: AppState) {
   app.use("/account/*", auth);
   app.use("/account", auth);
   app.use("/admin/*", auth);
+  app.use("/billing/*", auth);
 
   app.route("/sync", syncRoutes(db));
   app.route("/account", accountRoutes(db, env));
+  app.route("/billing", billingRoutes(db, env, settings));
 
   // LLM config is read lazily so admin changes apply without restart.
   // LLM config: env overrides win, else admin app_settings; read lazily so admin changes apply.

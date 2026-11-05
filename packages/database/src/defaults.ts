@@ -16,4 +16,5 @@ export const APP_SETTINGS_DEFAULTS: Record<string, unknown> = {
   "pricing.premium_included_tokens": 25,
   "languages.enabled": [{ target: "es", native: "de" }],
   maintenance: false,
+  announcements: [], // [{ id, title, markdown, at }] shown in the in-app inbox
 };

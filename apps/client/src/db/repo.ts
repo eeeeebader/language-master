@@ -16,6 +16,12 @@ import { db } from "./db";
 
 const nowIso = () => new Date().toISOString();
 
+/** Called after lectures and stories are finished; the client registers the notification reschedule here. */
+export const learningEventHooks: Array<() => void> = [];
+const onLearningEvent = () => {
+  for (const h of learningEventHooks) h();
+};
+
 // ---------- settings ----------
 
 export async function getSettings() {
@@ -313,6 +319,7 @@ export async function markLectureDone(lectureId: string) {
   if (existing) return;
   await db.lectureProgress.put({ lectureId, doneAt: nowIso() });
   await bumpActivity(toLocalDay(new Date()), { lecturesDone: 1, minutes: 3 });
+  onLearningEvent();
 }
 
 export async function markStoryFinished(storyId: string) {
@@ -326,6 +333,7 @@ export async function markStoryFinished(storyId: string) {
     updatedAt: nowIso(),
   });
   await bumpActivity(toLocalDay(new Date()), { storiesRead: 1, minutes: 5 });
+  onLearningEvent();
 }
 
 export async function wipeEverything() {

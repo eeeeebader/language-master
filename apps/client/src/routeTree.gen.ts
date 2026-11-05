@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as FaqRouteImport } from './routes/faq'
+import { Route as InboxRouteImport } from './routes/inbox'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as TourRouteImport } from './routes/tour'
@@ -22,6 +23,7 @@ import { Route as LecturesIndexRouteImport } from './routes/lectures.index'
 import { Route as LecturesSlugRouteImport } from './routes/lectures.$slug'
 import { Route as LegalDocRouteImport } from './routes/legal.$doc'
 import { Route as SettingsIndexRouteImport } from './routes/settings.index'
+import { Route as SettingsNotificationsRouteImport } from './routes/settings.notifications'
 import { Route as SettingsStreakRouteImport } from './routes/settings.streak'
 import { Route as StoriesIndexRouteImport } from './routes/stories.index'
 import { Route as StoriesStoryIdRouteImport } from './routes/stories.$storyId'
@@ -35,6 +37,11 @@ const IndexRoute = IndexRouteImport.update({
 const FaqRoute = FaqRouteImport.update({
   id: '/faq',
   path: '/faq',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InboxRoute = InboxRouteImport.update({
+  id: '/inbox',
+  path: '/inbox',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OnboardingRoute = OnboardingRouteImport.update({
@@ -92,6 +99,11 @@ const SettingsIndexRoute = SettingsIndexRouteImport.update({
   path: '/settings/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SettingsNotificationsRoute = SettingsNotificationsRouteImport.update({
+  id: '/settings/notifications',
+  path: '/settings/notifications',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SettingsStreakRoute = SettingsStreakRouteImport.update({
   id: '/settings/streak',
   path: '/settings/streak',
@@ -116,6 +128,7 @@ const KarteikartenListsListIdRoute = KarteikartenListsListIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/faq': typeof FaqRoute
+  '/inbox': typeof InboxRoute
   '/onboarding': typeof OnboardingRoute
   '/profile': typeof ProfileRoute
   '/tour': typeof TourRoute
@@ -123,6 +136,7 @@ export interface FileRoutesByFullPath {
   '/karteikarten/session': typeof KarteikartenSessionRoute
   '/lectures/$slug': typeof LecturesSlugRoute
   '/legal/$doc': typeof LegalDocRoute
+  '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings/streak': typeof SettingsStreakRoute
   '/stories/$storyId': typeof StoriesStoryIdRoute
   '/dictionary/': typeof DictionaryIndexRoute
@@ -135,6 +149,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/faq': typeof FaqRoute
+  '/inbox': typeof InboxRoute
   '/onboarding': typeof OnboardingRoute
   '/profile': typeof ProfileRoute
   '/tour': typeof TourRoute
@@ -142,6 +157,7 @@ export interface FileRoutesByTo {
   '/karteikarten/session': typeof KarteikartenSessionRoute
   '/lectures/$slug': typeof LecturesSlugRoute
   '/legal/$doc': typeof LegalDocRoute
+  '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings/streak': typeof SettingsStreakRoute
   '/stories/$storyId': typeof StoriesStoryIdRoute
   '/dictionary': typeof DictionaryIndexRoute
@@ -155,6 +171,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/faq': typeof FaqRoute
+  '/inbox': typeof InboxRoute
   '/onboarding': typeof OnboardingRoute
   '/profile': typeof ProfileRoute
   '/tour': typeof TourRoute
@@ -162,6 +179,7 @@ export interface FileRoutesById {
   '/karteikarten/session': typeof KarteikartenSessionRoute
   '/lectures/$slug': typeof LecturesSlugRoute
   '/legal/$doc': typeof LegalDocRoute
+  '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings/streak': typeof SettingsStreakRoute
   '/stories/$storyId': typeof StoriesStoryIdRoute
   '/dictionary/': typeof DictionaryIndexRoute
@@ -176,6 +194,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/faq'
+    | '/inbox'
     | '/onboarding'
     | '/profile'
     | '/tour'
@@ -183,6 +202,7 @@ export interface FileRouteTypes {
     | '/karteikarten/session'
     | '/lectures/$slug'
     | '/legal/$doc'
+    | '/settings/notifications'
     | '/settings/streak'
     | '/stories/$storyId'
     | '/dictionary/'
@@ -195,6 +215,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/faq'
+    | '/inbox'
     | '/onboarding'
     | '/profile'
     | '/tour'
@@ -202,6 +223,7 @@ export interface FileRouteTypes {
     | '/karteikarten/session'
     | '/lectures/$slug'
     | '/legal/$doc'
+    | '/settings/notifications'
     | '/settings/streak'
     | '/stories/$storyId'
     | '/dictionary'
@@ -214,6 +236,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/faq'
+    | '/inbox'
     | '/onboarding'
     | '/profile'
     | '/tour'
@@ -221,6 +244,7 @@ export interface FileRouteTypes {
     | '/karteikarten/session'
     | '/lectures/$slug'
     | '/legal/$doc'
+    | '/settings/notifications'
     | '/settings/streak'
     | '/stories/$storyId'
     | '/dictionary/'
@@ -234,6 +258,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   FaqRoute: typeof FaqRoute
+  InboxRoute: typeof InboxRoute
   OnboardingRoute: typeof OnboardingRoute
   ProfileRoute: typeof ProfileRoute
   TourRoute: typeof TourRoute
@@ -241,6 +266,7 @@ export interface RootRouteChildren {
   KarteikartenSessionRoute: typeof KarteikartenSessionRoute
   LecturesSlugRoute: typeof LecturesSlugRoute
   LegalDocRoute: typeof LegalDocRoute
+  SettingsNotificationsRoute: typeof SettingsNotificationsRoute
   SettingsStreakRoute: typeof SettingsStreakRoute
   StoriesStoryIdRoute: typeof StoriesStoryIdRoute
   DictionaryIndexRoute: typeof DictionaryIndexRoute
@@ -265,6 +291,13 @@ declare module '@tanstack/react-router' {
       path: '/faq'
       fullPath: '/faq'
       preLoaderRoute: typeof FaqRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/inbox': {
+      id: '/inbox'
+      path: '/inbox'
+      fullPath: '/inbox'
+      preLoaderRoute: typeof InboxRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/onboarding': {
@@ -344,6 +377,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/settings/notifications': {
+      id: '/settings/notifications'
+      path: '/settings/notifications'
+      fullPath: '/settings/notifications'
+      preLoaderRoute: typeof SettingsNotificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings/streak': {
       id: '/settings/streak'
       path: '/settings/streak'
@@ -378,6 +418,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   FaqRoute: FaqRoute,
+  InboxRoute: InboxRoute,
   OnboardingRoute: OnboardingRoute,
   ProfileRoute: ProfileRoute,
   TourRoute: TourRoute,
@@ -385,6 +426,7 @@ const rootRouteChildren: RootRouteChildren = {
   KarteikartenSessionRoute: KarteikartenSessionRoute,
   LecturesSlugRoute: LecturesSlugRoute,
   LegalDocRoute: LegalDocRoute,
+  SettingsNotificationsRoute: SettingsNotificationsRoute,
   SettingsStreakRoute: SettingsStreakRoute,
   StoriesStoryIdRoute: StoriesStoryIdRoute,
   DictionaryIndexRoute: DictionaryIndexRoute,

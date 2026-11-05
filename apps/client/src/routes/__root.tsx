@@ -3,10 +3,12 @@ import { useEffect } from "react";
 import { Nav } from "@/components/Nav";
 import { OFFICIAL_STORIES } from "@/data/stories-es";
 import { db } from "@/db/db";
+import { learningEventHooks } from "@/db/repo";
 import { useSettings } from "@/hooks/useSettings";
 import { initAudio } from "@/lib/audio-pack";
 import { ensurePack } from "@/lib/dict-pack";
 import { setHaptics } from "@/lib/haptics";
+import { rescheduleNotifications } from "@/lib/notifications";
 import { setMuted } from "@/lib/sound";
 import { startSyncScheduler } from "@/lib/sync";
 
@@ -41,6 +43,20 @@ function Root() {
     if (!settings) return;
     setMuted(!settings.soundOn);
     setHaptics(settings.hapticsOn);
+  }, [settings]);
+
+  // Reminders are recomputed from local data on every app open and foreground.
+  useEffect(() => {
+    if (!settings) return;
+    const run = () => rescheduleNotifications().catch(() => undefined);
+    run();
+    learningEventHooks.push(run);
+    const onVis = () => document.visibilityState === "visible" && run();
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      document.removeEventListener("visibilitychange", onVis);
+      learningEventHooks.splice(learningEventHooks.indexOf(run), 1);
+    };
   }, [settings]);
 
   useEffect(() => {

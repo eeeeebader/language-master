@@ -4,6 +4,27 @@ import { IsoDateTime, NativeLanguage, StudyLanguage } from "./common";
 /** 0 = Sunday … 6 = Saturday, matching Date#getDay */
 export const Weekday = z.number().int().min(0).max(6);
 
+export const NotificationPrefs = z.object({
+  streak: z.boolean().default(true),
+  quietHours: z.object({ start: z.string(), end: z.string() }).nullable().default(null),
+  studyReminders: z
+    .array(z.object({ id: z.string(), weekdays: z.array(Weekday), time: z.string() }))
+    .default([]),
+  weekly: z
+    .object({ enabled: z.boolean(), weekday: Weekday, time: z.string() })
+    .default({ enabled: true, weekday: 0, time: "18:00" }),
+  cardsDue: z
+    .object({ enabled: z.boolean(), time: z.string(), threshold: z.number().int().min(1) })
+    .default({ enabled: false, time: "09:00", threshold: 20 }),
+  freeStory: z
+    .object({ enabled: z.boolean(), time: z.string() })
+    .default({ enabled: false, time: "12:00" }),
+  lectureNudge: z.object({ enabled: z.boolean() }).default({ enabled: false }),
+  /** Set once the OS permission has been asked (after the first finished session). */
+  permissionAsked: z.boolean().default(false),
+});
+export type NotificationPrefs = z.infer<typeof NotificationPrefs>;
+
 export const UserSettings = z.object({
   username: z.string().min(1).max(32),
   avatar: z.string().default("initials"),
@@ -18,6 +39,7 @@ export const UserSettings = z.object({
   learningDays: z.array(Weekday).default([1, 2, 3, 4, 5]),
   vacationUntil: z.string().nullable().default(null),
   onboardingDone: z.boolean().default(false),
+  notifications: NotificationPrefs.optional(),
   tourDone: z.boolean().default(false),
   createdAt: IsoDateTime,
 });

@@ -36,6 +36,19 @@ export interface StoryRow extends StoryDocument {
   archived: boolean;
 }
 
+/** In-app inbox item (changelog, legal update, announcement); never a system notification. */
+export interface InboxRow {
+  id: string;
+  kind: "changelog" | "legal" | "announcement";
+  title: string;
+  markdown: string;
+  at: string;
+  read: boolean;
+  requiresReconsent?: boolean;
+  document?: string;
+  version?: number;
+}
+
 /** Downloaded dictionary pack bytes; one row per (target, native). */
 /** One pre-rendered clip, keyed by the exact text it voices. */
 export interface AudioClipRow {
@@ -69,6 +82,7 @@ export class LanguageMasterDB extends Dexie {
   storyProgress!: EntityTable<StoryProgressRow, "storyId">;
   packFiles!: EntityTable<PackFileRow, "key">;
   audioClips!: EntityTable<AudioClipRow, "key">;
+  inbox!: EntityTable<InboxRow, "id">;
 
   constructor(name = "language-master") {
     super(name);
@@ -90,6 +104,7 @@ export class LanguageMasterDB extends Dexie {
     });
     this.version(2).stores({ packFiles: "key" });
     this.version(3).stores({ audioClips: "key" });
+    this.version(4).stores({ inbox: "id, at, read" });
   }
 }
 

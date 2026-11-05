@@ -1,6 +1,7 @@
-import { ArrowRight, BookOpenText, Cards, Fire, Path, User } from "@phosphor-icons/react";
+import { ArrowRight, BookOpenText, Cards, Fire, Path, Tray, User } from "@phosphor-icons/react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useLiveQuery } from "dexie-react-hooks";
+import { useEffect } from "react";
 import { VelocityChart } from "@/components/Charts";
 import { Button, Card, Page, Stat } from "@/components/ui";
 import { LECTURES_ES } from "@/data/lectures-es";
@@ -16,6 +17,7 @@ import {
   useWordsReadInStories,
 } from "@/hooks/useStats";
 import { t } from "@/lib/i18n";
+import { refreshInbox } from "@/lib/inbox";
 import { play } from "@/lib/sound";
 
 export const Route = createFileRoute("/")({ component: Home });
@@ -38,6 +40,10 @@ function Home() {
     return db.stories.get(progress.storyId);
   }, []);
   const doneLectures = useLiveQuery(() => db.lectureProgress.toArray(), []) ?? [];
+  const unread = useLiveQuery(() => db.inbox.filter((i) => !i.read).count(), []) ?? 0;
+  useEffect(() => {
+    refreshInbox().catch(() => undefined);
+  }, []);
   const nextLecture = LECTURES_ES.find((l) => !doneLectures.some((d) => d.lectureId === l.id));
 
   async function restore() {
@@ -52,13 +58,27 @@ function Home() {
     <Page
       title={t("home.greeting", { name: settings?.username ?? "" })}
       action={
-        <Link
-          to="/profile"
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-lavender-soft font-bold text-lavender-deep"
-          aria-label={t("profile.title")}
-        >
-          {settings?.avatar === "initials" ? initials : <User size={20} />}
-        </Link>
+        <>
+          <Link
+            to="/inbox"
+            className="relative flex h-10 w-10 items-center justify-center rounded-full bg-paper-2 text-ink-2"
+            aria-label="Postfach"
+          >
+            <Tray size={20} />
+            {unread > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-chip bg-rose-deep px-1 text-[11px] font-bold text-white">
+                {unread}
+              </span>
+            )}
+          </Link>
+          <Link
+            to="/profile"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-lavender-soft font-bold text-lavender-deep"
+            aria-label={t("profile.title")}
+          >
+            {settings?.avatar === "initials" ? initials : <User size={20} />}
+          </Link>
+        </>
       }
     >
       <Card

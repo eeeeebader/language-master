@@ -65,8 +65,15 @@ Server side and tooling (v0.2, scaffolded):
 - **.github/workflows**: CI (lint, typecheck, test, build, NLP tests, compose checks), GHCR image
   release on main, Capacitor mobile builds on tags (gated on secrets).
 
-Still open: implementing the `/admin/*` endpoints in the API, running the stack end to end against
-Supabase, local notifications, the real Wiktionary pack build and audio packs, and store releases.
+- **Notifications**: a pure planner in `packages/srs` (streak deadline minus one hour, study
+  reminders skipped on practised days, weekly summary recomputed from local data, due-card
+  projection, free story, lecture nudge, quiet hours) scheduled through Capacitor local
+  notifications on iOS/Android; the settings page edits every type and previews the plan. The
+  OS permission is requested after the first finished session. An in-app inbox shows changelog,
+  legal updates and announcements with an unread badge on Home.
+
+Still open: native builds with RevenueCat, re-consent enforcement for new AGB versions, Sentry and
+PostHog, Playwright smoke tests, and store releases.
 
 ## Repo layout
 

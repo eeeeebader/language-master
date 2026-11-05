@@ -146,6 +146,7 @@ function Settings() {
       </Card>
       <Card className="mb-4 divide-y divide-line">
         <Row to="/settings/streak" label={t("settings.streak")} />
+        <Row to="/settings/notifications" label="Benachrichtigungen" />
         <Row to="/faq" label={t("settings.faq")} />
         <Row to="/legal/$doc" params={{ doc: "agb" }} label="AGB" />
         <Row to="/legal/$doc" params={{ doc: "datenschutz" }} label="Datenschutzerklärung" />

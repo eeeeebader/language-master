@@ -21,3 +21,6 @@ apps/site/.astro/
 apps/site/docs/.vitepress/cache/
 apps/site/docs/.vitepress/dist/
 packages/content-tools/packs/*.sqlite
+apps/client/test-results/
+apps/client/playwright-report/
+apps/client/dev-dist/

@@ -65,3 +65,24 @@ jobs:
       - run: docker compose -f docker/docker-compose.yml --env-file docker/.env.example config -q
       - run: docker compose -f docker/docker-compose.yml -f docker/docker-compose.dev.yml --env-file docker/.env.example config -q
       - run: docker compose -f infra/supabase/docker-compose.yml --env-file infra/supabase/.env.example config -q
+
+  e2e:
+    name: Playwright smoke (web client, local-only mode)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: corepack enable && corepack prepare --activate
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @lm/client exec playwright install --with-deps chromium
+      - run: pnpm --filter @lm/client e2e
+        env:
+          CI: "true"
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-traces
+          path: apps/client/test-results

@@ -1,3 +1,4 @@
+import { registerSW } from "virtual:pwa-register";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
@@ -6,6 +7,7 @@ import { routeTree } from "./routeTree.gen";
 import "./styles.css";
 
 initTelemetry();
+registerSW({ immediate: true });
 
 const router = createRouter({ routeTree, defaultPreload: "intent", scrollRestoration: true });
 

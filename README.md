@@ -82,8 +82,14 @@ Server side and tooling (v0.2, scaffolded):
   builds, and PostHog Cloud EU product analytics with typed events (`packages/schema/src/events.ts`),
   pseudonymous ids, no session recording and an in-app opt-out. All inert without keys.
 
-Still open: Playwright smoke tests, a Grafana dashboard, store configuration (RevenueCat products,
-signing) and store releases.
+- **Web offline**: a service worker precaches the whole bundle (routes, SQLite wasm), so the web
+  app reloads and navigates offline; packs and audio live in IndexedDB.
+- **Playwright smoke tests** (`pnpm --filter @lm/client e2e`, against the built bundle in
+  local-only mode): onboarding and starter session, dashboard, dictionary search and add-to-list,
+  reaction-time and progressive sessions, lecture with quick check, reader drawer and vocabulary
+  summary, and an offline reload plus session. Run in CI.
+
+Still open: a Grafana dashboard, store configuration (RevenueCat products, signing) and store releases.
 
 ## Repo layout
 
@@ -113,6 +119,7 @@ pnpm dev:admin    # admin on http://127.0.0.1:5174 (mock mode without env)
 pnpm dev:api      # API (needs DATABASE_URL etc., see apps/api/.env.example)
 pnpm dev:site
 pnpm test         # vitest in all packages + i18n key check
+pnpm --filter @lm/client e2e   # Playwright smoke tests (builds and previews the client)
 pnpm typecheck
 pnpm lint         # biome
 pnpm build

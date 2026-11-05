@@ -4,12 +4,28 @@ import tailwindcss from "@tailwindcss/vite";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
+import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
   plugins: [
     tanstackRouter({ target: "react", autoCodeSplitting: true }),
     react(),
     tailwindcss(),
+    // Offline-first on the web: precache the whole bundle so every route, the SQLite wasm and the
+    // manifest open without a network; packs and audio live in IndexedDB, not in the cache.
+    VitePWA({
+      registerType: "autoUpdate",
+      injectRegister: false,
+      manifest: false,
+      workbox: {
+        globPatterns: ["**/*.{js,css,html,svg,wasm,webmanifest,woff2}"],
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
+        navigateFallback: "/index.html",
+        navigateFallbackDenylist: [/^\/auth\//, /^\/storage\//],
+        runtimeCaching: [],
+      },
+      devOptions: { enabled: false },
+    }),
     // Source maps go to Sentry only on CI builds that carry a token; local builds are unaffected.
     ...(process.env.SENTRY_AUTH_TOKEN
       ? [

@@ -20,7 +20,9 @@
       "!**/*.astro",
       "!apps/client/android",
       "!apps/client/ios",
-      "!apps/client/assets"
+      "!apps/client/assets",
+      "!**/test-results",
+      "!**/playwright-report"
     ]
   },
   "formatter": {

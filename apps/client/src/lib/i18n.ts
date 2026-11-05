@@ -56,6 +56,14 @@ const de = {
   "cards.focus.hard": "schwere",
   "cards.focus.failed": "fehlerhafte",
   "list.export": "Liste exportieren",
+  "list.rename": "Liste umbenennen",
+  "list.addWord": "Wort hinzufügen",
+  "list.addWord.hint":
+    "Spanisches Wort eingeben – Vorschlag aus dem Wörterbuch übernehmen oder eigenes Wort anlegen.",
+  "list.addWord.custom": "Als eigenes Wort anlegen",
+  "cards.translation.missing": "Übersetzung fehlt",
+  "cards.translation.edit": "Übersetzung bearbeiten",
+
   "list.share": "Liste teilen",
   "list.shareSoon": "kommt mit dem Social-Update",
   "list.delete": "Liste löschen",
@@ -123,7 +131,7 @@ const de = {
   "session.check": "Prüfen",
   "session.inferred": "Erkannt: {grade}",
   "session.override": "Tippe eine andere Note, falls das nicht stimmt.",
-  "session.summary": "Sitzung beendet",
+  "session.summary": "Zusammenfassung",
   "session.cleared": "{n} Karten geschafft",
   "session.skipped": "Für heute zurückgestellt",
   "session.again": "Noch eine Runde",

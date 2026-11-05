@@ -1,7 +1,7 @@
 import { ArrowLeft, Plus, SpeakerHigh } from "@phosphor-icons/react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { Button, Card, Page } from "@/components/ui";
+import { Card, Page } from "@/components/ui";
 import { VariantPicker } from "@/components/VariantPicker";
 import { getEntry } from "@/lib/dictionary";
 import { t } from "@/lib/i18n";
@@ -24,11 +24,6 @@ function Entry() {
           <ArrowLeft size={22} />
         </Link>
       }
-      action={
-        <Button size="sm" onClick={() => setPick("lemma")}>
-          <Plus size={16} /> {t("dict.addToList")}
-        </Button>
-      }
     >
       <div className="mb-4">
         <div className="flex items-center gap-3">
@@ -43,6 +38,14 @@ function Entry() {
             aria-label="Aussprache"
           >
             <SpeakerHigh size={20} />
+          </button>
+          <button
+            type="button"
+            className="ml-auto rounded-full bg-sage-soft p-2 text-sage-deep"
+            onClick={() => setPick("lemma")}
+            aria-label={t("dict.addToList")}
+          >
+            <Plus size={18} weight="bold" />
           </button>
         </div>
         <div className="mt-1 text-ink-2">

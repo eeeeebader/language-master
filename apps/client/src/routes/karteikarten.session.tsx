@@ -18,7 +18,13 @@ import {
   summarise,
   toLocalDay,
 } from "@lm/srs";
-import { ArrowCounterClockwise, ChatCircleText, SpeakerHigh, X } from "@phosphor-icons/react";
+import {
+  ArrowCounterClockwise,
+  ArrowLeft,
+  ChatCircleText,
+  SpeakerHigh,
+  X,
+} from "@phosphor-icons/react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
@@ -89,6 +95,7 @@ function Session() {
   const [recent, setRecent] = useState<SessionCard[]>([]);
   const [sinceOverview, setSinceOverview] = useState(0);
   const [overviewSentences, setOverviewSentences] = useState<Record<string, WordSentence>>({});
+  const [peek, setPeek] = useState(false);
   const shownAt = useRef(0);
   const reactionRef = useRef<number | null>(null);
   const autoRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -101,7 +108,7 @@ function Session() {
   const stored = state?.current ? state.cards[state.current] : undefined;
   const step = state ? currentStep(state) : null;
   const cardDir: "t2n" | "n2t" = step?.dir ?? stored?.dir ?? (direction === "n2t" ? "n2t" : "t2n");
-  const current = stored ? orient(stored, cardDir) : undefined;
+  const current = useMemo(() => (stored ? orient(stored, cardDir) : undefined), [stored, cardDir]);
   const phase = current && state ? state.phase[current.variantId] : undefined;
   const useChoice = ladderMode && (step?.kind ?? phase) === "choice";
   const useTyping = ladderMode && (step?.kind ?? phase) === "typing";
@@ -174,6 +181,7 @@ function Session() {
       shownAt.current = performance.now();
       reactionRef.current = null;
       setTyped("");
+      setPeek(false);
       if (useChoice) {
         // Distractors must answer in the same direction as the shown card.
         const dir = cardDir;
@@ -236,12 +244,14 @@ function Session() {
       else play("error");
       if (grade === 4) haptics.warn();
       else haptics.tap();
-      if (manual && mode === "classic" && !showResult) {
+      const last = isFinished(next);
+      if (manual && mode === "classic" && !showResult && !last) {
         proceed(next, sinceOverview + 1);
         return;
       }
       setStage("result");
-      autoRef.current = setTimeout(() => proceed(next, sinceOverview + 1), RESULT_MS);
+      // The final card waits for Weiter so its grade can still be changed.
+      if (!last) autoRef.current = setTimeout(() => proceed(next, sinceOverview + 1), RESULT_MS);
     },
     // biome-ignore lint/correctness/useExhaustiveDependencies: proceed/finish are stable closures over state
     [state, current, mode, promptKind, proceed, sinceOverview],
@@ -270,6 +280,13 @@ function Session() {
     setOverviewSentences(map);
     setSinceOverview(0);
     setStage("overview");
+  }
+
+  /** Flip the answered card back and forth while grading; pauses the auto-advance. */
+  function togglePeek() {
+    if (autoRef.current) clearTimeout(autoRef.current);
+    autoRef.current = null;
+    setPeek((p) => !p);
   }
 
   /** One step back from the next card to change the previous grade. */
@@ -415,15 +432,33 @@ function Session() {
   }
 
   if (stage === "done" && state && summary) {
-    const skippedCards = summary.skipped
-      .map((id) => state.cards[id])
-      .filter((c): c is SessionCard => !!c);
+    const skippedSet = new Set(summary.skipped);
+    const lastGradeOf = new Map<string, Grade>();
+    for (const a of state.answers) lastGradeOf.set(a.variantId, a.grade);
+    const allCards = Object.values(state.cards);
+    const TONE: Record<Grade, string> = {
+      1: "bg-sage-soft text-sage-deep",
+      2: "bg-sky-soft text-sky-deep",
+      3: "bg-amber-soft text-amber-deep",
+      4: "bg-rose-soft text-rose-deep",
+    };
     return (
-      <Page>
+      <Page
+        back={
+          <button
+            type="button"
+            onClick={close}
+            className="rounded-full p-2 hover:bg-paper-2"
+            aria-label={t("common.back")}
+          >
+            <ArrowLeft size={22} />
+          </button>
+        }
+        title={t("session.summary")}
+      >
         <Confetti />
-        <div className="mx-auto mt-10 max-w-md text-center">
-          <h1 className="text-3xl font-extrabold">{t("session.summary")}</h1>
-          <p className="mt-2 text-xl text-ink-2">{t("session.cleared", { n: summary.cleared })}</p>
+        <div className="mx-auto max-w-md text-center">
+          <p className="text-xl text-ink-2">{t("session.cleared", { n: summary.cleared })}</p>
           <div className="mt-6 grid grid-cols-4 gap-2">
             {([1, 2, 3, 4] as Grade[]).map((g) => (
               <Card
@@ -439,28 +474,45 @@ function Session() {
           <p className="mt-3 text-sm text-ink-3">
             {Math.round(summary.durationMs / 1000)} s · {summary.answers} Antworten
           </p>
-          {skippedCards.length > 0 && (
-            <Card className="mt-4 text-left">
-              <div className="mb-1 text-sm font-semibold text-ink-2">{t("session.skipped")}</div>
-              <div className="flex flex-wrap gap-1.5">
-                {skippedCards.map((c) => (
-                  <span
-                    key={c.variantId}
-                    className="rounded-chip bg-rose-soft px-2 py-0.5 text-sm text-rose-deep"
+          <div className="mt-5 space-y-2 text-left">
+            {allCards.map((c) => {
+              const target = (c.dir ?? "t2n") === "t2n" ? c.front : c.back;
+              const native = (c.dir ?? "t2n") === "t2n" ? c.back : c.front;
+              const g = lastGradeOf.get(c.variantId);
+              const skippedCard = skippedSet.has(c.variantId);
+              return (
+                <Card key={c.variantId} className="flex items-center gap-3 py-3">
+                  <div className="min-w-0 flex-1 font-bold">
+                    {target} <span className="font-normal text-ink-2">· {native}</span>
+                  </div>
+                  {skippedCard ? (
+                    <span className="rounded-chip bg-paper-2 px-2 py-0.5 text-xs text-ink-3">
+                      {t("session.skipped")}
+                    </span>
+                  ) : g ? (
+                    <span className={cx("rounded-chip px-2 py-0.5 text-xs", TONE[g])}>
+                      {t(`grade.${g}` as "grade.1")}
+                    </span>
+                  ) : null}
+                  <button
+                    type="button"
+                    className="rounded-full bg-sky-soft p-2 text-sky-deep"
+                    onClick={() => speak(target)}
+                    aria-label="Aussprache"
                   >
-                    {c.front}
-                  </span>
-                ))}
-              </div>
-            </Card>
-          )}
+                    <SpeakerHigh size={16} />
+                  </button>
+                </Card>
+              );
+            })}
+          </div>
           {mode === "forever" && (
             <Button full variant="secondary" className="mt-6" onClick={addMoreNew}>
               {t("session.moreNew", { n: 10 })}
             </Button>
           )}
           <Button full size="lg" className="mt-3" onClick={close}>
-            {search.onboarding ? t("common.next") : t("session.toHome")}
+            {search.onboarding ? t("common.next") : t("common.back")}
           </Button>
         </div>
       </Page>
@@ -529,9 +581,10 @@ function Session() {
     );
   }
 
-  if (!state || !current) return null;
-  // While the result panel is open, keep showing the card that was just answered.
+  // While the result panel is open, keep showing the card that was just answered (it may have
+  // been the final one, in which case there is no current card any more).
   const shown = stage === "result" && lastCard ? lastCard : current;
+  if (!state || !shown) return null;
   const left = remaining(state);
   const total = Object.keys(state.cards).length;
   const progress = total ? ((total - left) / total) * 100 : 0;
@@ -567,8 +620,8 @@ function Session() {
             <FlipCard
               front={shown.front}
               back={shown.back}
-              flipped={stage !== "front"}
-              onFlip={() => stage === "front" && reveal()}
+              flipped={stage !== "front" && !peek}
+              onFlip={() => (stage === "front" ? reveal() : stage === "result" && togglePeek())}
               footer={
                 <button
                   type="button"
@@ -599,8 +652,8 @@ function Session() {
             <FlipCard
               front={shown.front}
               back={shown.back}
-              flipped={stage !== "front"}
-              onFlip={() => stage === "front" && reveal()}
+              flipped={stage !== "front" && !peek}
+              onFlip={() => (stage === "front" ? reveal() : stage === "result" && togglePeek())}
             />
             <div className="mt-6">
               {stage === "front" && (
@@ -629,7 +682,7 @@ function Session() {
                 {useChoice ? "Auswahl" : "Tippen"}
                 {state.config.ladder && stage !== "result" && (
                   <span className="ml-2 text-ink-3/70">
-                    {(state.step[current.variantId] ?? 0) + 1}/{state.config.ladder.length}
+                    {(state.step[shown.variantId] ?? 0) + 1}/{state.config.ladder.length}
                   </span>
                 )}
               </div>
@@ -669,7 +722,7 @@ function Session() {
 
         {stage === "result" && lastGrade && (
           <Card className={cx("mt-4", lastCorrect === false ? "bg-rose-soft" : "bg-sage-soft")}>
-            {lastCorrect === false && (ladderMode || lastGrade === 4) && (
+            {lastCorrect === false && ladderMode && (
               <div className="mb-2 text-center text-sm text-rose-deep">
                 Richtig wäre: <b>{shown.back}</b>
               </div>
@@ -690,6 +743,18 @@ function Session() {
           </Card>
         )}
       </div>
+
+      {(stage !== "front" || (shown.dir ?? "t2n") === "t2n") && (
+        <div className="mt-3 flex justify-center">
+          <button
+            type="button"
+            className="inline-flex items-center gap-1 rounded-chip bg-sky-soft px-3 py-1 text-sm text-sky-deep"
+            onClick={() => speak((shown.dir ?? "t2n") === "t2n" ? shown.front : shown.back)}
+          >
+            <SpeakerHigh size={16} /> Aussprache
+          </button>
+        </div>
+      )}
 
       {(stage === "front" || stage === "revealed") && (
         <div className="mt-6 flex items-center justify-center gap-2">

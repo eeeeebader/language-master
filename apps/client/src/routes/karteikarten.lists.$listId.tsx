@@ -1,19 +1,31 @@
+import type { DictionaryEntry } from "@lm/schema";
 import {
   ArrowLeft,
   CaretRight,
   DotsThreeVertical,
   DownloadSimple,
+  PencilSimple,
+  Plus,
   ShareNetwork,
   Trash,
 } from "@phosphor-icons/react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useLiveQuery } from "dexie-react-hooks";
-import { useState } from "react";
-import { Card, Chip, Empty, Page } from "@/components/ui";
+import { useEffect, useRef, useState } from "react";
+import { Button, Card, Chip, Empty, Page, Sheet } from "@/components/ui";
 import { db } from "@/db/db";
-import { softDeleteList } from "@/db/repo";
+import {
+  addDictionaryWord,
+  addToList,
+  ensureVariant,
+  ensureWord,
+  renameList,
+  softDeleteList,
+} from "@/db/repo";
+import { searchDictionaryAsync } from "@/lib/dictionary";
 import { t } from "@/lib/i18n";
 import { RATING_TONE, rateWord } from "@/lib/rating";
+import { play } from "@/lib/sound";
 
 export const Route = createFileRoute("/karteikarten/lists/$listId")({ component: ListDetail });
 
@@ -22,6 +34,67 @@ function ListDetail() {
   const navigate = useNavigate();
   const list = useLiveQuery(() => db.lists.get(listId), [listId]);
   const [menu, setMenu] = useState(false);
+  const [renaming, setRenaming] = useState(false);
+  const [title, setTitle] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [q, setQ] = useState("");
+  const [back, setBack] = useState("");
+  const [hits, setHits] = useState<DictionaryEntry[]>([]);
+  const seq = useRef(0);
+  useEffect(() => {
+    if (!adding) return;
+    const id = ++seq.current;
+    const tm = setTimeout(async () => {
+      const r = q.trim() ? await searchDictionaryAsync(q.trim(), 6) : [];
+      if (id === seq.current) setHits(r);
+    }, 120);
+    return () => clearTimeout(tm);
+  }, [q, adding]);
+
+  async function saveTitle() {
+    if (!title.trim()) return;
+    await renameList(listId, title.trim());
+    setRenaming(false);
+  }
+
+  async function addFromDictionary(e: DictionaryEntry) {
+    const gloss = e.glosses
+      .map((g) => g.text)
+      .slice(0, 2)
+      .join(", ");
+    const useArticle = !!e.article && e.pos === "noun";
+    await addDictionaryWord(
+      e,
+      [
+        {
+          kind: useArticle ? "article" : "lemma",
+          front: useArticle ? `${e.article} ${e.lemma}` : e.lemma,
+          back: gloss,
+        },
+      ],
+      listId,
+    );
+    play("add");
+    setQ("");
+    setBack("");
+    setAdding(false);
+  }
+
+  async function addCustomWord() {
+    if (!q.trim() || !back.trim()) return;
+    const w = await ensureWord({
+      language: "es",
+      lemma: q.trim(),
+      translation: back.trim(),
+      pos: "other",
+    });
+    await ensureVariant(w.id, "custom", q.trim(), back.trim());
+    await addToList(listId, w.id);
+    play("add");
+    setQ("");
+    setBack("");
+    setAdding(false);
+  }
 
   async function exportList() {
     if (!list || !rows) return;
@@ -106,6 +179,17 @@ function ListDetail() {
                   <button
                     type="button"
                     className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-paper-2"
+                    onClick={() => {
+                      setTitle(list?.title ?? "");
+                      setRenaming(true);
+                      setMenu(false);
+                    }}
+                  >
+                    <PencilSimple size={18} /> {t("list.rename")}
+                  </button>
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-paper-2"
                     onClick={exportList}
                   >
                     <DownloadSimple size={18} /> {t("list.export")}
@@ -127,6 +211,16 @@ function ListDetail() {
                     onClick={deleteList}
                   >
                     <Trash size={18} /> {t("list.delete")}
+                  </button>
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-3 border-t border-line px-4 py-3 text-left hover:bg-paper-2"
+                    onClick={() => {
+                      setAdding(true);
+                      setMenu(false);
+                    }}
+                  >
+                    <Plus size={18} /> {t("list.addWord")}
                   </button>
                 </div>
               </>
@@ -172,7 +266,76 @@ function ListDetail() {
             <CaretRight className="text-ink-3" />
           </Card>
         ))}
+        <button
+          type="button"
+          className="flex items-center justify-center gap-2 rounded-card border border-dashed border-line px-4 py-3 text-ink-2 hover:bg-white"
+          onClick={() => setAdding(true)}
+        >
+          <Plus size={18} /> {t("list.addWord")}
+        </button>
       </div>
+
+      <Sheet open={renaming} onClose={() => setRenaming(false)} title={t("list.rename")}>
+        <input
+          autoFocus
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && saveTitle()}
+          className="mb-4 w-full rounded-chip border border-line bg-white px-4 py-2"
+        />
+        <Button full disabled={!title.trim()} onClick={saveTitle}>
+          {t("common.save")}
+        </Button>
+      </Sheet>
+
+      <Sheet open={adding} onClose={() => setAdding(false)} title={t("list.addWord")}>
+        <p className="mb-2 text-sm text-ink-2">{t("list.addWord.hint")}</p>
+        <input
+          autoFocus
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Spanisch"
+          autoCapitalize="off"
+          className="mb-2 w-full rounded-chip border border-line bg-white px-4 py-2"
+        />
+        {hits.length > 0 && (
+          <div className="mb-3 grid gap-1.5">
+            {hits.map((e) => (
+              <button
+                type="button"
+                key={e.id}
+                className="flex items-center gap-2 rounded-card bg-white px-3 py-2 text-left hover:bg-paper-2"
+                onClick={() => addFromDictionary(e)}
+              >
+                <span className="font-semibold">
+                  {e.article ? `${e.article} ` : ""}
+                  {e.lemma}
+                </span>
+                <span className="min-w-0 flex-1 truncate text-sm text-ink-2">
+                  {e.glosses.map((g) => g.text).join(", ")}
+                </span>
+                <Plus size={16} className="text-sage-deep" />
+              </button>
+            ))}
+          </div>
+        )}
+        <div className="mt-2 text-sm text-ink-2">{t("list.addWord.custom")}</div>
+        <input
+          value={back}
+          onChange={(e) => setBack(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && addCustomWord()}
+          placeholder="Deutsch"
+          className="my-2 w-full rounded-chip border border-line bg-white px-4 py-2"
+        />
+        <Button
+          full
+          variant="secondary"
+          disabled={!q.trim() || !back.trim()}
+          onClick={addCustomWord}
+        >
+          {t("list.addWord.custom")}
+        </Button>
+      </Sheet>
     </Page>
   );
 }

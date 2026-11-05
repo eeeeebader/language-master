@@ -1,5 +1,5 @@
 import type { GrammarSpan, StorySentence, StoryToken } from "@lm/schema";
-import { normaliseAnswer } from "@lm/srs";
+import { normaliseAnswer, toLocalDay } from "@lm/srs";
 import { ArrowLeft, Plus, SpeakerHigh } from "@phosphor-icons/react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useLiveQuery } from "dexie-react-hooks";
@@ -8,9 +8,16 @@ import { ListPicker } from "@/components/ListPicker";
 import { Button, Card, Chip, cx, Page, ProgressBar, Sheet } from "@/components/ui";
 import { VariantPicker } from "@/components/VariantPicker";
 import { db } from "@/db/db";
-import { addSentence, addToList, ensureVariant, ensureWord, markStoryFinished } from "@/db/repo";
+import {
+  addSentence,
+  addToList,
+  bumpActivity,
+  ensureVariant,
+  ensureWord,
+  markStoryFinished,
+} from "@/db/repo";
 import { computeCoverage, storyLemmas } from "@/lib/coverage";
-import { getEntryByLemma } from "@/lib/dictionary";
+import { getEntryByLemma, searchDictionary } from "@/lib/dictionary";
 import { t } from "@/lib/i18n";
 import { play } from "@/lib/sound";
 import { track } from "@/lib/telemetry";
@@ -38,6 +45,28 @@ function Reader() {
   const [listId, setListId] = useState<string | null>(null);
   const [pickEntry, setPickEntry] = useState<ReturnType<typeof getEntryByLemma> | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+
+  // Reading time counts towards the daily minutes (flushed every minute and on leave).
+  useEffect(() => {
+    let since = performance.now();
+    const flush = () => {
+      const ms = performance.now() - since;
+      since = performance.now();
+      if (ms > 5_000)
+        bumpActivity(toLocalDay(new Date()), { minutes: Math.round((ms / 60_000) * 10) / 10 });
+    };
+    const iv = setInterval(flush, 60_000);
+    const onVis = () => {
+      if (document.visibilityState === "hidden") flush();
+      else since = performance.now();
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      clearInterval(iv);
+      document.removeEventListener("visibilitychange", onVis);
+      flush();
+    };
+  }, []);
 
   const knownLemmas = useMemo(
     () => new Set(words.filter((w) => !w.deletedAt).map((w) => normaliseAnswer(w.lemma))),
@@ -85,6 +114,20 @@ function Reader() {
       });
   }
 
+  /** Gloss for a token the annotator left empty: best dictionary hit for the surface/lemma. */
+  function fallbackGloss(lemma: string, surface?: string): string {
+    for (const q of [lemma, surface ?? ""]) {
+      if (!q) continue;
+      const hit = searchDictionary(q, 3).find((e) => e.glosses.length > 0);
+      if (hit)
+        return hit.glosses
+          .map((g) => g.text)
+          .slice(0, 2)
+          .join(", ");
+    }
+    return "";
+  }
+
   async function addFromDrawer() {
     if (!sel) return;
     const entry = getEntryByLemma(sel.token.lemma);
@@ -94,13 +137,14 @@ function Reader() {
     }
     // Not in the dictionary: custom word with the contextual gloss.
     if (!listId) return;
+    const gloss = sel.token.gloss || fallbackGloss(sel.token.lemma, sel.token.text);
     const w = await ensureWord({
       language: "es",
       lemma: sel.token.lemma,
-      translation: sel.token.gloss ?? "",
+      translation: gloss,
       pos: sel.token.pos,
     });
-    await ensureVariant(w.id, "custom", sel.token.lemma, sel.token.gloss ?? "");
+    await ensureVariant(w.id, "custom", sel.token.lemma, gloss);
     await addToList(listId, w.id);
     await addSentence(
       w.id,
@@ -164,13 +208,14 @@ function Reader() {
           await addSentence(w.id, sentenceText(sentence), sentence.translation, "story", story?.id);
       } else {
         const tok = findToken(lemma);
+        const gloss = tok?.gloss || fallbackGloss(lemma, tok?.text);
         const w = await ensureWord({
           language: "es",
           lemma,
-          translation: tok?.gloss ?? "",
+          translation: gloss,
           pos: tok?.pos ?? "other",
         });
-        await ensureVariant(w.id, "custom", lemma, tok?.gloss ?? "");
+        await ensureVariant(w.id, "custom", lemma, gloss);
         await addToList(listId, w.id);
         if (sentence)
           await addSentence(w.id, sentenceText(sentence), sentence.translation, "story", story?.id);

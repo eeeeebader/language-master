@@ -1,11 +1,18 @@
 import type { WordSentence } from "@lm/schema";
-import { ArrowLeft, BookOpenText, Plus, SpeakerHigh, Trash } from "@phosphor-icons/react";
+import {
+  ArrowLeft,
+  BookOpenText,
+  PencilSimple,
+  Plus,
+  SpeakerHigh,
+  Trash,
+} from "@phosphor-icons/react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useLiveQuery } from "dexie-react-hooks";
 import { useState } from "react";
 import { Button, Card, Chip, Page, Sheet } from "@/components/ui";
 import { db } from "@/db/db";
-import { addSentence, removeFromList, removeSentence } from "@/db/repo";
+import { addSentence, removeFromList, removeSentence, updateWordTranslation } from "@/db/repo";
 import { getEntry, getEntryByLemma } from "@/lib/dictionary";
 import { t } from "@/lib/i18n";
 import { RATING_TONE, rateWord } from "@/lib/rating";
@@ -40,11 +47,19 @@ function WordDetail() {
   const [adding, setAdding] = useState(false);
   const [text, setText] = useState("");
   const [translation, setTranslation] = useState("");
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
 
   if (!word) return <Page>…</Page>;
   const entry =
     (word.dictionaryRef ? getEntry(word.dictionaryRef) : undefined) ?? getEntryByLemma(word.lemma);
   const { rating, retention } = rateWord(states);
+
+  async function saveTranslation() {
+    if (!draft.trim()) return;
+    await updateWordTranslation(wordId, draft.trim());
+    setEditing(false);
+  }
 
   async function saveSentence() {
     if (!text.trim() || !translation.trim()) return;
@@ -78,7 +93,38 @@ function WordDetail() {
       }
     >
       <Card className="mb-3">
-        <div className="text-xl font-semibold">{word.translation}</div>
+        {editing ? (
+          <div className="flex gap-2">
+            <input
+              autoFocus
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && saveTranslation()}
+              placeholder="Deutsche Übersetzung"
+              className="flex-1 rounded-chip border border-line bg-white px-4 py-2"
+            />
+            <Button size="sm" disabled={!draft.trim()} onClick={saveTranslation}>
+              {t("common.save")}
+            </Button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <div className={word.translation ? "text-xl font-semibold" : "text-ink-3"}>
+              {word.translation || t("cards.translation.missing")}
+            </div>
+            <button
+              type="button"
+              className="rounded-full p-1.5 text-ink-3 hover:bg-paper-2"
+              onClick={() => {
+                setDraft(word.translation);
+                setEditing(true);
+              }}
+              aria-label={t("cards.translation.edit")}
+            >
+              <PencilSimple size={16} />
+            </button>
+          </div>
+        )}
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <span className="text-sm text-ink-2">{t("cards.rating")}:</span>
           <Chip tone={RATING_TONE[rating]}>

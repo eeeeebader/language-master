@@ -18,7 +18,8 @@ test("dictionary search finds words by Spanish and German and adds a card varian
   await expect(page.getByText(/^el\s+perro$/).first()).toBeVisible();
   await page.getByRole("button", { name: "Zur Liste hinzufügen" }).first().click();
   await expect(page.getByText("Welche Form möchtest du lernen?")).toBeVisible();
-  await page.getByRole("button", { name: /Mit Artikel/ }).click();
+  // "Mit Artikel" is preselected for nouns; no click needed
+  await expect(page.getByRole("button", { name: /Mit Artikel/ })).toBeVisible();
   await page.getByRole("button", { name: "Neue Liste" }).click();
   await page.getByPlaceholder("Titel").fill("Tiere");
   await page.getByRole("button", { name: "Speichern" }).click();

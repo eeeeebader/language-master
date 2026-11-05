@@ -146,6 +146,21 @@ export async function removeFromList(listId: string, wordId: string) {
   await db.listWords.delete([listId, wordId]);
 }
 
+export async function renameList(listId: string, title: string) {
+  await db.lists.update(listId, { title, updatedAt: nowIso() });
+}
+
+/** Set a word's translation; variants that still carry the old or empty back follow. */
+export async function updateWordTranslation(wordId: string, translation: string) {
+  const w = await db.words.get(wordId);
+  if (!w) return;
+  await db.words.update(wordId, { translation, updatedAt: nowIso() });
+  const variants = await db.variants.where("wordId").equals(wordId).toArray();
+  for (const v of variants)
+    if (!v.back.trim() || v.back === w.translation)
+      await db.variants.update(v.id, { back: translation });
+}
+
 export async function softDeleteList(listId: string) {
   await db.lists.update(listId, { deletedAt: nowIso(), updatedAt: nowIso() });
 }

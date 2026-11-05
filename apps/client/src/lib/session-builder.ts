@@ -81,6 +81,7 @@ export async function buildSession(opts: BuildOptions): Promise<SessionCard[]> {
     const w = wordMap.get(v.wordId);
     if (!w) continue;
     const st = states.get(v.id);
+    if (!v.front.trim() || !v.back.trim()) continue; // nothing to ask yet (missing translation)
     if (opts.filter === "due" && !isDue(st, now)) continue;
     if (opts.filter === "new" && st) continue;
     if (opts.filter === "failed" && failedVariantIds && !failedVariantIds.has(v.id)) continue;

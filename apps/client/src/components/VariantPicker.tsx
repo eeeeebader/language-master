@@ -1,5 +1,5 @@
 import type { DictionaryEntry } from "@lm/schema";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { addDictionaryWord } from "@/db/repo";
 import { type VariantOption, variantOptions } from "@/lib/dictionary";
 import * as haptics from "@/lib/haptics";
@@ -23,10 +23,20 @@ export function VariantPicker({
   const options = entry ? variantOptions(entry) : [];
   const conj = options.filter((o) => o.kind === "conjugation");
   const simple = options.filter((o) => o.kind !== "conjugation");
-  const [picked, setPicked] = useState<Set<string>>(() => new Set([preselect ?? "lemma"]));
-  const [showConj, setShowConj] = useState(false);
-
   const key = (o: VariantOption) => `${o.kind}:${o.front}`;
+  const defaultPick = () => {
+    const want = preselect ?? (options.some((o) => o.kind === "article") ? "article" : "lemma");
+    const o = options.find((x) => x.kind === want) ?? options[0];
+    return new Set(o ? [key(o)] : []);
+  };
+  const [picked, setPicked] = useState<Set<string>>(defaultPick);
+  const [showConj, setShowConj] = useState(false);
+  // New entry or preselect: start from the default pick again.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reset only when the entry changes
+  useEffect(() => {
+    setPicked(defaultPick());
+    setShowConj(false);
+  }, [entry?.id, preselect]);
   const toggle = (o: VariantOption) => {
     const n = new Set(picked);
     const k = key(o);

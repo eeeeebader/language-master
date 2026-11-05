@@ -1,0 +1,71 @@
+@import "tailwindcss";
+
+/* Design tokens: warm paper background and five pastel accents that double as grammar colours. */
+@theme {
+  --color-paper: #faf8f5;
+  --color-paper-2: #f3efe8;
+  --color-ink: #2b2a28;
+  --color-ink-2: #6b665f;
+  --color-ink-3: #a39d94;
+  --color-line: #e7e1d8;
+
+  --color-sage: #b7c9a8;
+  --color-sage-deep: #5d7a4a;
+  --color-sage-soft: #e6eedf;
+  --color-rose: #e8b4b8;
+  --color-rose-deep: #a65560;
+  --color-rose-soft: #f7e3e5;
+  --color-lavender: #c9bfe3;
+  --color-lavender-deep: #6a5a9c;
+  --color-lavender-soft: #ebe6f5;
+  --color-amber: #f0cf8c;
+  --color-amber-deep: #9a6b14;
+  --color-amber-soft: #faecd0;
+  --color-sky: #a9cde6;
+  --color-sky-deep: #2f6b94;
+  --color-sky-soft: #e0eef7;
+
+  --radius-card: 1.25rem;
+  --radius-chip: 999px;
+  --font-sans: "Nunito Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --ease-pop: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+html {
+  color-scheme: light only;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  @apply bg-paper text-ink font-sans antialiased;
+  font-size: 17px;
+  margin: 0;
+  min-height: 100dvh;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* 3D flip card */
+.flip-scene { perspective: 1200px; }
+.flip-card { transition: transform 300ms var(--ease-pop); transform-style: preserve-3d; }
+.flip-card.is-flipped { transform: rotateY(180deg); }
+.flip-face { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.flip-back { transform: rotateY(180deg); }
+
+@keyframes pop { 0% { transform: scale(0.96); opacity: 0.6 } 100% { transform: scale(1); opacity: 1 } }
+.animate-pop { animation: pop 220ms var(--ease-pop) both; }
+
+@keyframes confetti-fall { 0% { transform: translateY(-20px) rotate(0deg); opacity: 1 } 100% { transform: translateY(60vh) rotate(540deg); opacity: 0 } }
+.confetti { position: fixed; top: 0; width: 10px; height: 14px; border-radius: 2px; animation: confetti-fall 1200ms ease-in both; pointer-events: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .flip-card, .animate-pop, .confetti { animation: none; transition: none; }
+}
+
+.grammar-sage { background: var(--color-sage-soft); box-shadow: inset 0 -2px 0 var(--color-sage); }
+.grammar-rose { background: var(--color-rose-soft); box-shadow: inset 0 -2px 0 var(--color-rose); }
+.grammar-lavender { background: var(--color-lavender-soft); box-shadow: inset 0 -2px 0 var(--color-lavender); }
+.grammar-amber { background: var(--color-amber-soft); box-shadow: inset 0 -2px 0 var(--color-amber); }
+.grammar-sky { background: var(--color-sky-soft); box-shadow: inset 0 -2px 0 var(--color-sky); }
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; }

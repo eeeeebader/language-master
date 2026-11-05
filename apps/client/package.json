@@ -1,0 +1,40 @@
+{
+  "name": "@lm/client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 5173",
+    "build": "vite build",
+    "preview": "vite preview --port 4173",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "cap:sync": "cap sync"
+  },
+  "dependencies": {
+    "@capacitor/core": "8.6.0",
+    "@capacitor/haptics": "8.0.2",
+    "@lm/schema": "workspace:*",
+    "@lm/srs": "workspace:*",
+    "@phosphor-icons/react": "2.1.10",
+    "@tanstack/react-router": "1.170.46",
+    "dexie": "4.4.7",
+    "dexie-react-hooks": "4.4.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.6.0",
+    "@tailwindcss/vite": "4.3.4",
+    "@tanstack/router-plugin": "1.168.48",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.2.1",
+    "fake-indexeddb": "6.2.7",
+    "tailwindcss": "4.3.4",
+    "typescript": "5.9.3",
+    "vite": "8.3.6",
+    "vitest": "5.1.0"
+  }
+}

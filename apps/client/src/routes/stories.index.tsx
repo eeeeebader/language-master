@@ -1,0 +1,191 @@
+import type { StoryTheme } from "@lm/schema";
+import { BookOpenText, CaretRight, Sparkle } from "@phosphor-icons/react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useLiveQuery } from "dexie-react-hooks";
+import { useState } from "react";
+import { Button, Card, Chip, Page, ProgressBar } from "@/components/ui";
+import { GRAMMAR_FOCI_ES, THEME_LABELS } from "@/data/stories-es";
+import { db } from "@/db/db";
+import { computeCoverage } from "@/lib/coverage";
+import { t } from "@/lib/i18n";
+
+export const Route = createFileRoute("/stories/")({ component: Stories });
+
+function Stories() {
+  const navigate = useNavigate();
+  const stories = useLiveQuery(() => db.stories.filter((s) => !s.archived).toArray(), []) ?? [];
+  const progress = useLiveQuery(() => db.storyProgress.toArray(), []) ?? [];
+  const lists = useLiveQuery(() => db.lists.filter((l) => !l.deletedAt).toArray(), []) ?? [];
+  const coverage = useLiveQuery(async () => {
+    const words = await db.words.toArray();
+    const states = await db.cardStates.toArray();
+    const all = await db.stories.toArray();
+    return Object.fromEntries(all.map((s) => [s.id, computeCoverage(s, words, states)]));
+  }, []);
+
+  const [novelty, setNovelty] = useState(0.1);
+  const [failed, setFailed] = useState<"off" | "few" | "some" | "many">("few");
+  const [level, setLevel] = useState<1 | 2 | 3>(1);
+  const [length, setLength] = useState<1 | 2 | 3>(1);
+  const [theme, setTheme] = useState<StoryTheme>("daily_shopping");
+  const [grammar, setGrammar] = useState(GRAMMAR_FOCI_ES[0] as string);
+  const [sources, setSources] = useState<Set<string>>(new Set());
+  const expectedNew = Math.round(([350, 750, 1200][length - 1] as number) * novelty * 0.6);
+
+  return (
+    <Page title={t("stories.title")}>
+      <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-ink-3">
+        {t("stories.library")}
+      </h2>
+      <div className="mb-6 grid gap-2">
+        {stories.map((s) => {
+          const p = progress.find((x) => x.storyId === s.id);
+          const c = coverage?.[s.id];
+          const pct = c?.total ? Math.round(((c.known + c.learning) / c.total) * 100) : 0;
+          return (
+            <Card
+              key={s.id}
+              className="flex items-center gap-3"
+              onClick={() => navigate({ to: "/stories/$storyId", params: { storyId: s.id } })}
+            >
+              <BookOpenText size={28} weight="duotone" className="text-sky-deep" />
+              <div className="flex-1 min-w-0">
+                <div className="font-bold">{s.title}</div>
+                <div className="text-sm text-ink-2">
+                  {THEME_LABELS[s.theme] ?? s.theme} · {s.grammarFocus} ·{" "}
+                  {s.source === "official" ? "Offizieller Text" : "KI"}
+                  {p?.finishedAt && <span className="ml-1 text-sage-deep">· gelesen</span>}
+                </div>
+                {c && (
+                  <div className="mt-2">
+                    <ProgressBar
+                      parts={[
+                        { value: c.known, colour: "sage" },
+                        { value: c.learning, colour: "sky" },
+                        { value: c.struggling, colour: "amber" },
+                        { value: c.new, colour: "line" },
+                      ]}
+                    />
+                    <div className="mt-1 text-xs text-ink-3">
+                      {t("stories.coverage")} {pct} % · {c.new} {t("stories.newWords")}
+                    </div>
+                  </div>
+                )}
+              </div>
+              <CaretRight className="text-ink-3" />
+            </Card>
+          );
+        })}
+      </div>
+
+      <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-ink-3">
+        {t("stories.new")}
+      </h2>
+      <Card tone="sky" className="mb-3 border-transparent text-sm">
+        <Sparkle className="mr-1 inline" /> {t("stories.offlineNote")}
+      </Card>
+
+      <Card className="mb-3">
+        <div className="flex items-center justify-between">
+          <span className="font-bold">{t("stories.novelty")}</span>
+          <span className="text-sm text-ink-2">
+            ≈ {Math.round((1 - novelty) * 100)} % bekannt · ≈ {expectedNew} neue Wörter
+          </span>
+        </div>
+        <input
+          type="range"
+          min={0.02}
+          max={0.2}
+          step={0.01}
+          value={novelty}
+          onChange={(e) => setNovelty(Number(e.target.value))}
+          className="mt-2 w-full accent-sky-deep"
+        />
+        <div className="flex justify-between text-xs text-ink-3">
+          <span>sanft</span>
+          <span>Immersion</span>
+        </div>
+      </Card>
+
+      <Card className="mb-3">
+        <div className="mb-2 font-bold">{t("stories.failed")}</div>
+        <div className="flex gap-2">
+          {(["off", "few", "some", "many"] as const).map((f) => (
+            <Chip key={f} active={failed === f} onClick={() => setFailed(f)}>
+              {{ off: "aus", few: "wenige (3)", some: "einige (6)", many: "viele (10)" }[f]}
+            </Chip>
+          ))}
+        </div>
+      </Card>
+
+      <div className="mb-3 grid grid-cols-2 gap-3">
+        <Card>
+          <div className="mb-2 font-bold">{t("stories.level")}</div>
+          <div className="flex gap-2">
+            {([1, 2, 3] as const).map((n) => (
+              <Chip key={n} active={level === n} onClick={() => setLevel(n)}>
+                {n}
+              </Chip>
+            ))}
+          </div>
+        </Card>
+        <Card>
+          <div className="mb-2 font-bold">{t("stories.length")}</div>
+          <div className="flex gap-2">
+            {([1, 2, 3] as const).map((n) => (
+              <Chip key={n} active={length === n} onClick={() => setLength(n)}>
+                {[5, 10, 15][n - 1]} min
+              </Chip>
+            ))}
+          </div>
+        </Card>
+      </div>
+
+      <Card className="mb-3">
+        <div className="mb-2 font-bold">{t("stories.theme")}</div>
+        <div className="flex flex-wrap gap-2">
+          {(Object.keys(THEME_LABELS) as StoryTheme[]).map((k) => (
+            <Chip key={k} active={theme === k} onClick={() => setTheme(k)}>
+              {THEME_LABELS[k]}
+            </Chip>
+          ))}
+        </div>
+      </Card>
+
+      <Card className="mb-3">
+        <div className="mb-2 font-bold">{t("stories.grammar")}</div>
+        <div className="flex flex-wrap gap-2">
+          {GRAMMAR_FOCI_ES.map((g) => (
+            <Chip key={g} active={grammar === g} onClick={() => setGrammar(g)}>
+              {g}
+            </Chip>
+          ))}
+        </div>
+      </Card>
+
+      <Card className="mb-5">
+        <div className="mb-2 font-bold">{t("stories.sources")}</div>
+        <div className="flex flex-wrap gap-2">
+          {lists.map((l) => (
+            <Chip
+              key={l.id}
+              active={sources.has(l.id)}
+              tone={sources.has(l.id) ? undefined : l.colour}
+              onClick={() => {
+                const n = new Set(sources);
+                n.has(l.id) ? n.delete(l.id) : n.add(l.id);
+                setSources(n);
+              }}
+            >
+              {l.title}
+            </Chip>
+          ))}
+        </div>
+      </Card>
+
+      <Button full size="lg" disabled title="Benötigt den Server (Version 0.2)">
+        <Sparkle /> {t("stories.generate")}
+      </Button>
+    </Page>
+  );
+}

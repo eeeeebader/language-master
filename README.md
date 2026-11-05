@@ -26,9 +26,11 @@ What works:
   classic, reaction-time, progressive (choice → typing) and Learn Forever. Reaction-time grading
   with self-calibrating base, per-word response profiles (EMA), one-tap override via superseding
   events, 5/10-minute retry loops, the 10-card cognitive-load cap and skip-after-three-Agains.
-- **Dictionary**: hand-curated Spanish–German seed (~140 entries) with gender, plural, gender pairs,
-  conjugations, IPA, examples; prefix + fuzzy + accent-insensitive search; variant picker on every
-  form; custom entries.
+- **Dictionary**: a downloadable Spanish–German pack (German-Wiktionary glosses, English-Wiktionary
+  morphology, curated A1 overrides; ~2 600 lemmas plus ~4 000 inflected forms, 1.8 MB) checked
+  against a manifest on launch, stored on the device and queried with sql.js; the bundled ~140-entry
+  seed is the fallback. Prefix + fuzzy + accent-insensitive search; variant picker on every form;
+  custom entries.
 - **Lectures**: Spanish unit 0 as twelve nodes on an SVG path, rendered from the typed block schema
   (alphabet grid, number table, rule cards, pattern builder, conjugation mini, dialogue, compare,
   constraint visual, quick check, vocab bundle). Soft locks; "Got it" or the quick check marks a node done.

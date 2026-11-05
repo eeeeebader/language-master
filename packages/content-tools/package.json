@@ -14,7 +14,8 @@
     "test": "vitest run",
     "build-pack": "tsx src/cli/build-pack.ts",
     "validate-lectures": "tsx src/cli/validate-lectures.ts",
-    "render-audio": "tsx src/cli/render-audio.ts"
+    "render-audio": "tsx src/cli/render-audio.ts",
+    "export-seed-overrides": "tsx src/cli/export-seed-overrides.ts"
   },
   "dependencies": {
     "@lm/schema": "workspace:*",

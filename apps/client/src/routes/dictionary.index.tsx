@@ -7,6 +7,7 @@ import { Button, Card, Empty, Page, Sheet } from "@/components/ui";
 import { VariantPicker } from "@/components/VariantPicker";
 import { DICTIONARY_VERSION } from "@/data/dictionary-es";
 import { addToList, ensureVariant, ensureWord } from "@/db/repo";
+import { usePackState } from "@/hooks/usePack";
 import { searchDictionary } from "@/lib/dictionary";
 import { t } from "@/lib/i18n";
 import { play } from "@/lib/sound";
@@ -30,7 +31,9 @@ const POS_DE: Record<string, string> = {
 
 function Dictionary() {
   const [q, setQ] = useState("");
-  const results = useMemo(() => searchDictionary(q), [q]);
+  const pack = usePackState();
+  // biome-ignore lint/correctness/useExhaustiveDependencies: results change when the pack loads
+  const results = useMemo(() => searchDictionary(q), [q, pack.status]);
   const [picking, setPicking] = useState<DictionaryEntry | null>(null);
   const [custom, setCustom] = useState(false);
   const [front, setFront] = useState("");
@@ -64,7 +67,12 @@ function Dictionary() {
   return (
     <Page title={t("dict.title")}>
       <p className="-mt-3 mb-3 text-sm text-ink-3">
-        {t("dict.offline")} · {DICTIONARY_VERSION}
+        {t("dict.offline")} ·{" "}
+        {pack.status === "ready"
+          ? `Paket v${pack.version} · ${pack.lemmas.toLocaleString("de-DE")} Lemmata`
+          : pack.status === "downloading"
+            ? `Paket wird geladen … ${Math.round((pack.received / Math.max(1, pack.total)) * 100)} %`
+            : `${DICTIONARY_VERSION} (eingebaut)`}
       </p>
       <input
         value={q}

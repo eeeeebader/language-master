@@ -10,6 +10,7 @@ import { accountRoutes } from "./routes/account";
 import { adminRoutes } from "./routes/admin";
 import { billingRoutes } from "./routes/billing";
 import { healthRoutes } from "./routes/health";
+import { packRoutes } from "./routes/packs";
 import { storyRoutes } from "./routes/stories";
 import { syncRoutes } from "./routes/sync";
 import { webhookRoutes } from "./routes/webhooks";
@@ -43,6 +44,7 @@ export function createApp(db: Db, env: Env, state: AppState) {
 
   app.route("/health", healthRoutes(db, state));
   app.route("/webhooks", webhookRoutes(db, env));
+  app.route("/packs", packRoutes(db));
 
   const auth = requireUser(env.SUPABASE_JWT_SECRET);
   app.use("/sync/*", auth);

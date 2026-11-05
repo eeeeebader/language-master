@@ -1,3 +1,23 @@
+## Dictionary pack build (two Wiktionary extracts)
+
+The English-Wiktionary Spanish extract has no German translations, so a Spanish→German pack is
+built from two Kaikki files:
+
+- glosses: `https://kaikki.org/dewiktionary/Spanisch/kaikki.org-dictionary-Spanisch.jsonl` (German
+  Wiktionary, ~9 MB, ~7 000 lemmas, German sense descriptions and short translations)
+- morphology: `https://kaikki.org/dictionary/Spanish/kaikki.org-dictionary-Spanish.jsonl` (English
+  Wiktionary, ~1.1 GB, forms, gender, conjugations, IPA), streamed
+
+```bash
+pnpm export-seed-overrides --out overrides.es-de.json   # curated A1 glosses from the client seed
+pnpm build-pack --de kaikki.org-dictionary-Spanisch.jsonl --en kaikki.org-dictionary-Spanish.jsonl \
+  --overrides overrides.es-de.json --out dist --version 1
+node ../../infra/scripts/publish-pack.mjs --file dist/es-de.v1.sqlite --manifest dist/es-de.v1.manifest.json --publish
+```
+
+The search table is a plain indexed table (lemma, forms, gloss words, accent-stripped) rather than
+FTS5, so the pack queries identically under node:sqlite, sql.js and native SQLite builds.
+
 # @lm/content-tools
 
 Build and validate content: dictionary packs, lectures, audio.

@@ -1,20 +1,28 @@
 import type { DictionaryEntry, VariantKind } from "@lm/schema";
 import { fuzzyMatch, normaliseAnswer } from "@lm/srs";
 import { DICTIONARY_ES } from "@/data/dictionary-es";
+import { dictClient } from "./dict-pack";
 
 const byId = new Map(DICTIONARY_ES.map((e) => [e.id, e]));
 const byLemma = new Map(DICTIONARY_ES.map((e) => [normaliseAnswer(e.lemma), e]));
 
 export function getEntry(id: string): DictionaryEntry | undefined {
-  return byId.get(id);
+  return dictClient()?.getEntry(id) ?? byId.get(id);
 }
 
 export function getEntryByLemma(lemma: string): DictionaryEntry | undefined {
-  return byLemma.get(normaliseAnswer(lemma));
+  return dictClient()?.getByLemma(lemma) ?? byLemma.get(normaliseAnswer(lemma));
+}
+
+/** Where entries come from right now: the downloaded pack or the bundled seed. */
+export function dictionarySource(): "pack" | "seed" {
+  return dictClient() ? "pack" : "seed";
 }
 
 /** Prefix + fuzzy (edit distance 1), accent-insensitive, over lemma, forms and German glosses. */
 export function searchDictionary(query: string, limit = 30): DictionaryEntry[] {
+  const pack = dictClient();
+  if (pack) return pack.search(query, limit);
   const q = normaliseAnswer(query);
   if (!q)
     return DICTIONARY_ES.slice()

@@ -153,3 +153,158 @@ export function fromKaikki(
   void native;
   return entry;
 }
+
+// ---------- German Wiktionary extract (kaikki.org/dewiktionary/Spanisch) ----------
+
+/**
+ * One line of the German Wiktionary's Spanish entries. Glosses are German sense descriptions;
+ * `translations` (lang_code "de") carry short German equivalents. Morphology is thin, so the
+ * English Wiktionary extract supplies forms, gender and conjugations for the same lemma.
+ */
+export interface DeWiktionaryLine {
+  word: string;
+  pos: string;
+  lang_code: string;
+  senses?: {
+    glosses?: string[];
+    tags?: string[];
+    examples?: { text: string; translation?: string }[];
+  }[];
+  forms?: { form: string; tags?: string[] }[];
+  sounds?: { ipa?: string }[];
+  translations?: { lang_code?: string; word?: string }[];
+  tags?: string[];
+}
+
+const DE_ARTICLE = /^(der|die|das|ein|eine)\s+/i;
+
+/** Short German glosses: translations first, else the last clause of each sense description. */
+export function deGlosses(line: DeWiktionaryLine): { text: string; note?: string }[] {
+  const out: { text: string; note?: string }[] = [];
+  const seen = new Set<string>();
+  const push = (text: string, note?: string) => {
+    const t = text.trim();
+    if (!t || seen.has(t.toLowerCase())) return;
+    seen.add(t.toLowerCase());
+    out.push(note ? { text: t, note } : { text: t });
+  };
+  for (const tr of line.translations ?? []) {
+    if (tr.lang_code === "de" && tr.word) push(tr.word);
+    if (out.length >= 3) break;
+  }
+  if (out.length === 0) {
+    for (const sense of line.senses ?? []) {
+      for (const g of sense.glosses ?? []) {
+        const clauses = g
+          .split(/;|,/)
+          .map((c) => c.trim())
+          .filter(Boolean);
+        const last = clauses[clauses.length - 1] ?? g;
+        if (last.split(" ").length <= 3)
+          push(last.replace(DE_ARTICLE, ""), clauses.length > 1 ? clauses[0] : undefined);
+        else push(g.length > 60 ? `${g.slice(0, 57)}…` : g);
+        if (out.length >= 3) break;
+      }
+      if (out.length >= 3) break;
+    }
+  }
+  return out.slice(0, 4);
+}
+
+/**
+ * German Wiktionary has one entry per inflected form ("3. Person Singular … des Verbs hablar",
+ * "Plural des Substantivs casa"). Detect them so they become form rows of their lemma.
+ */
+const INFLECTED =
+  /(?:des (?:Verbs|Substantivs|Adjektivs|Pronomens)|Form des|Partizip (?:Perfekt|Präsens)[\s\S]*?des Verbs)\s+([^\s,;.]+)/;
+
+export interface InflectedForm {
+  lemma: string;
+  form: string;
+  /** "conjugation" for verb forms, "plural" / "gender_pair" for nouns and adjectives, else "form" */
+  kind: "conjugation" | "plural" | "gender_pair" | "form";
+}
+
+export function inflectedForm(line: DeWiktionaryLine): InflectedForm | null {
+  for (const sense of line.senses ?? []) {
+    for (const g of sense.glosses ?? []) {
+      const m = g.match(INFLECTED);
+      if (!m?.[1]) continue;
+      const lemma = m[1];
+      if (lemma === line.word) continue;
+      const kind: InflectedForm["kind"] = /des Verbs/.test(g)
+        ? "conjugation"
+        : /Plural/.test(g)
+          ? "plural"
+          : /weiblich|Femininum|feminin/i.test(g)
+            ? "gender_pair"
+            : "form";
+      return { lemma, form: line.word, kind };
+    }
+  }
+  return null;
+}
+
+/** Map a German-Wiktionary line to an entry (glosses, IPA, examples). Morphology comes later. */
+export function fromDeWiktionary(line: DeWiktionaryLine): DictionaryEntry | null {
+  if (line.lang_code !== "es") return null;
+  const pos = POS[line.pos];
+  if (!pos) return null;
+  if (inflectedForm(line)) return null;
+  const glosses = deGlosses(line);
+  if (glosses.length === 0) return null;
+  const tags = line.tags ?? [];
+  const gender: Gender | undefined =
+    pos === "noun"
+      ? tags.includes("masculine") && tags.includes("feminine")
+        ? "mf"
+        : tags.includes("masculine")
+          ? "m"
+          : tags.includes("feminine")
+            ? "f"
+            : undefined
+      : undefined;
+  const article =
+    gender === "m" ? "el" : gender === "f" ? "la" : gender === "mf" ? "el/la" : undefined;
+  const examples = (line.senses ?? [])
+    .flatMap((s) => s.examples ?? [])
+    .filter((e) => e.text && e.translation)
+    .slice(0, 3)
+    .map((e) => ({ text: e.text, translation: e.translation as string }));
+  return {
+    id: `es:${line.word}`,
+    language: "es",
+    lemma: line.word,
+    pos,
+    gender,
+    article,
+    ipa: line.sounds?.find((s) => s.ipa)?.ipa?.replace(/^[[/]|[\]/]$/g, ""),
+    glosses,
+    examples,
+    tags: [],
+  };
+}
+
+/** Fill gender, article, plural, gender pair, conjugations and IPA from the English extract. */
+export function mergeMorphology(entry: DictionaryEntry, en: KaikkiLine): DictionaryEntry {
+  const probe = fromKaikki(en, "de", { [en.word]: { glosses: [{ text: "x" }] } });
+  if (!probe) return entry;
+  return {
+    ...entry,
+    gender: entry.gender ?? probe.gender,
+    article: entry.article ?? probe.article,
+    plural: entry.plural ?? probe.plural,
+    genderPair: entry.genderPair ?? probe.genderPair,
+    conjugations: entry.conjugations ?? probe.conjugations,
+    ipa: entry.ipa ?? probe.ipa,
+  };
+}
+
+/** Hand-curated overrides win over both extracts; unknown lemmas are added as new entries. */
+export function applyOverride(
+  entry: DictionaryEntry,
+  ov: Overrides[string] | undefined,
+): DictionaryEntry {
+  if (!ov) return entry;
+  return { ...entry, ...ov, examples: ov.examples ?? entry.examples, tags: ov.tags ?? entry.tags };
+}

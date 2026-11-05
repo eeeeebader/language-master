@@ -10,6 +10,7 @@ import {
   getSettings,
   saveSettings,
 } from "@/db/repo";
+import { usePackState } from "@/hooks/usePack";
 import { variantOptions } from "@/lib/dictionary";
 import { t } from "@/lib/i18n";
 
@@ -53,6 +54,11 @@ function Onboarding() {
   const [over16, setOver16] = useState<boolean | null>(null);
   const [legal, setLegal] = useState(false);
   const [busy, setBusy] = useState(false);
+  const pack = usePackState();
+  const pct =
+    pack.status === "downloading"
+      ? Math.round((pack.received / Math.max(1, pack.total)) * 100)
+      : null;
 
   async function finish(startSession: boolean) {
     setBusy(true);
@@ -196,12 +202,26 @@ function Onboarding() {
             <h1 className="text-3xl font-extrabold tracking-tight">{t("onb.firstSession")}</h1>
             <Card tone="sage" className="mt-6 border-transparent">
               <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-sage-deep">
-                  ✓
+                <div
+                  className="flex h-12 w-12 items-center justify-center rounded-full text-sm font-bold text-sage-deep"
+                  style={{
+                    background:
+                      pct !== null
+                        ? `conic-gradient(var(--color-sage-deep) ${pct}%, white 0)`
+                        : "white",
+                  }}
+                >
+                  {pct !== null ? `${pct}%` : "✓"}
                 </div>
                 <div>
                   <div className="font-bold">{t("onb.dictionary")}</div>
-                  <div className="text-sm text-ink-2">{t("onb.dictionaryReady")}</div>
+                  <div className="text-sm text-ink-2">
+                    {pack.status === "ready"
+                      ? `Paket v${pack.version} geladen – ${pack.lemmas.toLocaleString("de-DE")} Wörter offline.`
+                      : pct !== null
+                        ? "Wird geladen – du kannst schon loslegen."
+                        : t("onb.dictionaryReady")}
+                  </div>
                 </div>
               </div>
             </Card>

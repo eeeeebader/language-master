@@ -2,7 +2,9 @@ import { ArrowLeft, CaretRight } from "@phosphor-icons/react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Card, Page, Toggle } from "@/components/ui";
 import { saveSettings } from "@/db/repo";
+import { usePackState } from "@/hooks/usePack";
 import { useSettings } from "@/hooks/useSettings";
+import { ensurePack, removePack } from "@/lib/dict-pack";
 import { t } from "@/lib/i18n";
 
 export const Route = createFileRoute("/settings/")({ component: Settings });
@@ -26,6 +28,7 @@ function Row({
 
 function Settings() {
   const s = useSettings();
+  const pack = usePackState();
   if (!s) return null;
   return (
     <Page
@@ -61,6 +64,40 @@ function Settings() {
             }
             className="w-20 rounded-chip border border-line bg-white px-3 py-1.5 text-right"
           />
+        </div>
+      </Card>
+      <Card className="mb-4">
+        <div className="flex items-center justify-between py-1">
+          <div>
+            <div className="font-medium">Wörterbuch Spanisch–Deutsch</div>
+            <div className="text-sm text-ink-2">
+              {pack.status === "ready"
+                ? `Paket v${pack.version} · ${pack.lemmas.toLocaleString("de-DE")} Lemmata · offline`
+                : pack.status === "downloading"
+                  ? `Lädt … ${Math.round((pack.received / Math.max(1, pack.total)) * 100)} %`
+                  : pack.status === "error"
+                    ? `Fehler: ${pack.message}`
+                    : "Eingebauter Grundwortschatz (kein Paket geladen)"}
+            </div>
+          </div>
+          <div className="flex gap-1">
+            <button
+              type="button"
+              className="rounded-chip bg-paper-2 px-3 py-1.5 text-sm"
+              onClick={() => ensurePack()}
+            >
+              Prüfen
+            </button>
+            {pack.status === "ready" && (
+              <button
+                type="button"
+                className="rounded-chip bg-paper-2 px-3 py-1.5 text-sm"
+                onClick={() => removePack()}
+              >
+                Entfernen
+              </button>
+            )}
+          </div>
         </div>
       </Card>
       <Card className="mb-4 divide-y divide-line">

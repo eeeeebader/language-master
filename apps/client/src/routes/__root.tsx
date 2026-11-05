@@ -4,6 +4,7 @@ import { Nav } from "@/components/Nav";
 import { OFFICIAL_STORIES } from "@/data/stories-es";
 import { db } from "@/db/db";
 import { useSettings } from "@/hooks/useSettings";
+import { ensurePack } from "@/lib/dict-pack";
 import { setHaptics } from "@/lib/haptics";
 import { setMuted } from "@/lib/sound";
 import { startSyncScheduler } from "@/lib/sync";
@@ -16,6 +17,11 @@ function Root() {
   const settings = useSettings();
   const navigate = useNavigate();
   const path = useRouterState({ select: (s) => s.location.pathname });
+
+  // Dictionary pack: open the installed one, then check the manifest for updates.
+  useEffect(() => {
+    ensurePack().catch(() => undefined);
+  }, []);
 
   // Seed official stories once so the stories table is the single source for the library.
   useEffect(() => {

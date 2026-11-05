@@ -63,7 +63,10 @@ export class DictClient {
     return row ? this.hydrate(row) : undefined;
   }
 
-  /** Prefix match via FTS5, then fuzzy (edit distance ≤ 1) on lemma/forms, accent-insensitive. */
+  /**
+   * Exact and prefix matches on lemma, forms and glosses (plain indexed table, so it runs on any
+   * SQLite build), then fuzzy (edit distance ≤ 1) on lemmas; all accent-insensitive.
+   */
   search(query: string, limit = 30): DictionaryEntry[] {
     const q = normalise(query);
     if (!q)
@@ -73,28 +76,38 @@ export class DictClient {
           [limit],
         )
         .map((r) => this.hydrate(r));
-    const ftsTerm = `"${q.replace(/"/g, "")}"*`;
+    // score: lower is better. exact lemma −100, exact form/gloss −90/−80, prefix −60/−50/−40, fuzzy −20
     const ids = new Map<string, number>();
-    for (const r of this.db.all<{ lemma_id: string; rank: number }>(
-      "SELECT lemma_id, rank FROM search WHERE search MATCH ? ORDER BY rank LIMIT ?",
-      [ftsTerm, limit * 2],
+    const bump = (id: string, score: number) => ids.set(id, Math.min(ids.get(id) ?? 0, score));
+    for (const r of this.db.all<{ lemma_id: string; norm: string; kind: number }>(
+      "SELECT lemma_id, norm, kind FROM search WHERE norm >= ? AND norm < ? ORDER BY kind, norm LIMIT ?",
+      [q, `${q}￿`, limit * 4],
     )) {
-      ids.set(r.lemma_id, Math.min(ids.get(r.lemma_id) ?? 0, -(100 + (r.rank ?? 0))));
+      const exact = r.norm === q;
+      bump(r.lemma_id, exact ? -100 + r.kind * 10 : -60 + r.kind * 10);
     }
-    for (const r of this.db.all<{ lemma_id: string }>("SELECT lemma_id FROM form WHERE norm = ?", [
-      q,
-    ]))
-      ids.set(r.lemma_id, Math.min(ids.get(r.lemma_id) ?? 0, -90));
     if (ids.size < limit && q.length >= 3) {
       const lo = q.slice(0, 1);
       for (const r of this.db.all<{ id: string; norm: string }>(
         "SELECT id, norm FROM lemma WHERE norm >= ? AND norm < ? AND length(norm) BETWEEN ? AND ?",
         [lo, `${lo}￿`, q.length - 1, q.length + 1],
       )) {
-        if (!ids.has(r.id) && editDistance(q, r.norm) <= 1) ids.set(r.id, -40);
+        if (!ids.has(r.id) && editDistance(q, r.norm) <= 1) bump(r.id, -20);
       }
     }
-    const ordered = [...ids.entries()].sort((a, b) => a[1] - b[1]).slice(0, limit);
+    const ranks = new Map(
+      this.db
+        .all<{ id: string; frequency_rank: number | null }>(
+          "SELECT id, frequency_rank FROM lemma WHERE id IN (" +
+            [...ids.keys()].map(() => "?").join(",") +
+            ")",
+          [...ids.keys()],
+        )
+        .map((r) => [r.id, r.frequency_rank ?? 99_999]),
+    );
+    const ordered = [...ids.entries()]
+      .sort((a, b) => a[1] - b[1] || (ranks.get(a[0]) ?? 0) - (ranks.get(b[0]) ?? 0))
+      .slice(0, limit);
     return ordered.map(([id]) => this.getEntry(id)).filter((e): e is DictionaryEntry => !!e);
   }
 

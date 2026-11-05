@@ -36,6 +36,15 @@ export interface StoryRow extends StoryDocument {
   archived: boolean;
 }
 
+/** Downloaded dictionary pack bytes; one row per (target, native). */
+export interface PackFileRow {
+  key: string;
+  version: number;
+  bytes: Uint8Array;
+  sha256: string;
+  installedAt: string;
+}
+
 export class LanguageMasterDB extends Dexie {
   settings!: EntityTable<SettingsRow, "key">;
   words!: EntityTable<UserWord, "id">;
@@ -51,6 +60,7 @@ export class LanguageMasterDB extends Dexie {
   lectureProgress!: EntityTable<LectureProgressRow, "lectureId">;
   stories!: EntityTable<StoryRow, "id">;
   storyProgress!: EntityTable<StoryProgressRow, "storyId">;
+  packFiles!: EntityTable<PackFileRow, "key">;
 
   constructor(name = "language-master") {
     super(name);
@@ -70,6 +80,7 @@ export class LanguageMasterDB extends Dexie {
       stories: "id, language, createdAt",
       storyProgress: "storyId",
     });
+    this.version(2).stores({ packFiles: "key" });
   }
 }
 

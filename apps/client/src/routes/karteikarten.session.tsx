@@ -3,11 +3,13 @@ import {
   answersMatch,
   calibrateBase,
   createSession,
+  currentStep,
   inferGrade,
   isFinished,
   pickDistractors,
   answer as planAnswer,
   skip as planSkip,
+  progressiveLadder,
   regradeLast,
   remaining,
   type SessionCard,
@@ -29,7 +31,7 @@ import { bumpActivity, getSettings, overrideReview, recordReview } from "@/db/re
 import * as haptics from "@/lib/haptics";
 import { t } from "@/lib/i18n";
 import { maybeAskPermission, rescheduleNotifications } from "@/lib/notifications";
-import { buildSession, type Direction, newCardsSeenToday } from "@/lib/session-builder";
+import { buildSession, type Direction, type Focus, newCardsSeenToday } from "@/lib/session-builder";
 import { play } from "@/lib/sound";
 import { track } from "@/lib/telemetry";
 import { speak } from "@/lib/tts";
@@ -41,6 +43,7 @@ const Search = z.object({
   direction: z.enum(["t2n", "n2t", "both"]).default("t2n"),
   sample: z.coerce.number().default(0),
   overview: z.coerce.number().default(10),
+  focus: z.string().default(""),
   onboarding: z.coerce.number().default(0),
 });
 
@@ -59,6 +62,13 @@ interface Pool {
 type Stage = "loading" | "empty" | "front" | "revealed" | "result" | "overview" | "done";
 
 const RESULT_MS = 3000;
+
+/** Show a card in the given direction; cards in ladder modes are stored target→native. */
+function orient(c: SessionCard, dir: "t2n" | "n2t"): SessionCard {
+  const base = c.dir ?? "t2n";
+  if (base === dir) return { ...c, dir };
+  return { ...c, front: c.back, back: c.front, dir };
+}
 
 function Session() {
   const search = Route.useSearch();
@@ -85,12 +95,16 @@ function Session() {
   const mode: SessionMode = search.mode;
   const direction: Direction = search.direction;
   const overviewEvery = search.overview;
+  const ladderMode = mode === "progressive" || mode === "forever";
+  const focus = search.focus.split(",").filter(Boolean) as Focus[];
 
-  const current = state?.current ? state.cards[state.current] : undefined;
-  const cardDir = current?.dir ?? (direction === "n2t" ? "n2t" : "t2n");
+  const stored = state?.current ? state.cards[state.current] : undefined;
+  const step = state ? currentStep(state) : null;
+  const cardDir: "t2n" | "n2t" = step?.dir ?? stored?.dir ?? (direction === "n2t" ? "n2t" : "t2n");
+  const current = stored ? orient(stored, cardDir) : undefined;
   const phase = current && state ? state.phase[current.variantId] : undefined;
-  const useChoice = mode === "progressive" && phase === "choice";
-  const useTyping = mode === "progressive" && phase === "typing";
+  const useChoice = ladderMode && (step?.kind ?? phase) === "choice";
+  const useTyping = ladderMode && (step?.kind ?? phase) === "typing";
   const promptKind: PromptKind = useChoice
     ? "choice"
     : cardDir === "t2n"
@@ -114,9 +128,11 @@ function Session() {
         language: "es",
         listIds,
         filter: search.filter,
-        direction,
+        // Ladder modes store cards target→native and orient them per step.
+        direction: ladderMode ? "t2n" : direction,
         sample: search.sample || null,
         forever,
+        focus,
       });
       const allVariants = await db.variants.toArray();
       const words = new Map((await db.words.toArray()).map((w) => [w.id, w]));
@@ -140,7 +156,13 @@ function Session() {
         setStage("empty");
         return;
       }
-      setState(createSession(cards, { mode }, Date.now()));
+      setState(
+        createSession(
+          cards,
+          { mode, ladder: ladderMode ? progressiveLadder(direction) : undefined },
+          Date.now(),
+        ),
+      );
       setStage("front");
       track("session_started", { mode, cards: cards.length });
     })();
@@ -154,7 +176,7 @@ function Session() {
       setTyped("");
       if (useChoice) {
         // Distractors must answer in the same direction as the shown card.
-        const dir = current.dir ?? "t2n";
+        const dir = cardDir;
         const oriented = pool.map((p) => ({
           id: p.id,
           pos: p.pos,
@@ -171,7 +193,7 @@ function Session() {
         setChoices(shuffle([target, ...d]));
       }
     }
-  }, [stage, current, useChoice, pool]);
+  }, [stage, current, useChoice, pool, cardDir]);
 
   const finish = useCallback(async (s: SessionState) => {
     setStage("done");
@@ -346,7 +368,7 @@ function Session() {
         language: "es",
         listIds: [],
         filter: "new",
-        direction,
+        direction: "t2n",
         sample: null,
         forever: { newLimit: 10 + have.size },
       })
@@ -362,7 +384,7 @@ function Session() {
               (c) => !state.cleared.includes(c.variantId) && !state.skipped.includes(c.variantId),
             )
           : cards,
-        { mode },
+        { mode, ladder: progressiveLadder(direction) },
         Date.now(),
       ),
     );
@@ -465,12 +487,21 @@ function Session() {
           {cards.map((c) => {
             const target = (c.dir ?? "t2n") === "t2n" ? c.front : c.back;
             const native = (c.dir ?? "t2n") === "t2n" ? c.back : c.front;
+            const stepLabel =
+              state.config.ladder && c.variantId in state.step
+                ? `${Math.min((state.step[c.variantId] ?? 0) + 1, state.config.ladder.length)}/${state.config.ladder.length}`
+                : null;
             const sentence = overviewSentences[c.wordId];
             return (
               <Card key={c.variantId} className="flex items-start gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="font-bold">
                     {target} <span className="font-normal text-ink-2">· {native}</span>
+                    {stepLabel && (
+                      <span className="ml-2 rounded-chip bg-paper-2 px-2 py-0.5 text-xs font-normal text-ink-3">
+                        {stepLabel}
+                      </span>
+                    )}
                   </div>
                   {sentence && (
                     <div className="mt-1 text-sm text-ink-2">
@@ -563,7 +594,7 @@ function Session() {
           </>
         )}
 
-        {(mode === "reaction" || mode === "forever") && (
+        {mode === "reaction" && (
           <>
             <FlipCard
               front={shown.front}
@@ -591,11 +622,16 @@ function Session() {
           </>
         )}
 
-        {mode === "progressive" && (
+        {ladderMode && (
           <>
             <Card className="min-h-[200px] flex flex-col items-center justify-center text-center">
               <div className="text-xs uppercase tracking-wide text-ink-3">
                 {useChoice ? "Auswahl" : "Tippen"}
+                {state.config.ladder && stage !== "result" && (
+                  <span className="ml-2 text-ink-3/70">
+                    {(state.step[current.variantId] ?? 0) + 1}/{state.config.ladder.length}
+                  </span>
+                )}
               </div>
               <div className="mt-2 text-3xl font-extrabold">{shown.front}</div>
               {stage !== "front" && (
@@ -633,7 +669,7 @@ function Session() {
 
         {stage === "result" && lastGrade && (
           <Card className={cx("mt-4", lastCorrect === false ? "bg-rose-soft" : "bg-sage-soft")}>
-            {lastCorrect === false && (mode === "progressive" || lastGrade === 4) && (
+            {lastCorrect === false && (ladderMode || lastGrade === 4) && (
               <div className="mb-2 text-center text-sm text-rose-deep">
                 Richtig wäre: <b>{shown.back}</b>
               </div>

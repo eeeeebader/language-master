@@ -1,9 +1,11 @@
 import type { CardState, CardVariant, ReviewEvent, UserWord } from "@lm/schema";
 import { isDue, type SessionCard, shuffle } from "@lm/srs";
 import { db } from "@/db/db";
+import { rateWord } from "@/lib/rating";
 
 export type Direction = "t2n" | "n2t" | "both";
 export type Filter = "all" | "due" | "failed" | "new";
+export type Focus = "new" | "easy" | "ok" | "hard" | "failed";
 
 export interface BuildOptions {
   language: "es";
@@ -13,6 +15,8 @@ export interface BuildOptions {
   sample: number | null;
   /** Learn Forever: due first, then new up to this many */
   forever?: { newLimit: number };
+  /** Focus badges from the practice setup; empty = all words. */
+  focus?: Focus[];
 }
 
 function toCard(
@@ -57,8 +61,9 @@ export async function buildSession(opts: BuildOptions): Promise<SessionCard[]> {
       .map((s) => [s.variantId, s]),
   );
 
+  const focus = new Set(opts.focus ?? []);
   let failedVariantIds: Set<string> | null = null;
-  if (opts.filter === "failed") {
+  if (opts.filter === "failed" || focus.has("failed")) {
     const since = new Date(now.getTime() - 14 * 86_400_000).toISOString();
     const recent = await db.events.where("reviewedAt").above(since).toArray();
     const superseded = new Set(
@@ -78,7 +83,21 @@ export async function buildSession(opts: BuildOptions): Promise<SessionCard[]> {
     const st = states.get(v.id);
     if (opts.filter === "due" && !isDue(st, now)) continue;
     if (opts.filter === "new" && st) continue;
-    if (failedVariantIds && !failedVariantIds.has(v.id)) continue;
+    if (opts.filter === "failed" && failedVariantIds && !failedVariantIds.has(v.id)) continue;
+    if (focus.size > 0) {
+      const wordStates = variants
+        .filter((x) => x.wordId === w.id)
+        .map((x) => states.get(x.id))
+        .filter((x): x is CardState => !!x);
+      const { rating } = rateWord(wordStates, now);
+      const matches =
+        (focus.has("new") && rating === "new") ||
+        (focus.has("easy") && rating === "strong") ||
+        (focus.has("ok") && rating === "ok") ||
+        (focus.has("hard") && rating === "weak") ||
+        (focus.has("failed") && !!failedVariantIds?.has(v.id));
+      if (!matches) continue;
+    }
     cards.push(toCard(v, w, st, opts.direction));
   }
 

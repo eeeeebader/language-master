@@ -12,6 +12,32 @@ export interface SessionCard {
 }
 
 export type ProgressivePhase = "choice" | "typing";
+export type StepDir = "t2n" | "n2t";
+
+/** One rung of the progressive ladder: how a card is asked and in which direction. */
+export interface SessionStep {
+  kind: ProgressivePhase;
+  dir: StepDir;
+}
+
+/**
+ * Ladder for the progressive / learn-forever modes. The first encounter is always multiple
+ * choice from the native language, the first typed answer always target→native; with "both"
+ * the remaining combinations follow so every card is answered in every form before it clears.
+ */
+export function progressiveLadder(direction: StepDir | "both"): SessionStep[] {
+  if (direction === "both")
+    return [
+      { kind: "choice", dir: "n2t" },
+      { kind: "typing", dir: "t2n" },
+      { kind: "choice", dir: "t2n" },
+      { kind: "typing", dir: "n2t" },
+    ];
+  return [
+    { kind: "choice", dir: direction },
+    { kind: "typing", dir: direction },
+  ];
+}
 
 export interface SessionConfig {
   mode: SessionMode;
@@ -21,6 +47,10 @@ export interface SessionConfig {
   maxAgainPerCard: number;
   retryAgainMs: number;
   retryHardMs: number;
+  /** Progressive ladder; when set, every card must pass each step with Gut or better. */
+  ladder?: SessionStep[];
+  /** Cards that passed a step come back after this many other cards. */
+  stepGapCards: number;
 }
 
 export const DEFAULT_SESSION_CONFIG: SessionConfig = {
@@ -29,6 +59,7 @@ export const DEFAULT_SESSION_CONFIG: SessionConfig = {
   maxAgainPerCard: 3,
   retryAgainMs: 5 * 60_000,
   retryHardMs: 10 * 60_000,
+  stepGapCards: 3,
 };
 
 export interface RetryItem {
@@ -53,6 +84,8 @@ export interface SessionState {
   skipped: string[];
   againCount: Record<string, number>;
   phase: Record<string, ProgressivePhase>;
+  /** Ladder step index per card (only with config.ladder). */
+  step: Record<string, number>;
   current: string | null;
   answers: AnswerRecord[];
   /** Snapshot before the last answer, for one-tap override. */
@@ -65,12 +98,18 @@ export function createSession(
   config: Partial<SessionConfig> & { mode: SessionMode },
   now: number,
 ): SessionState {
-  const cfg = { ...DEFAULT_SESSION_CONFIG, ...config };
+  const cfg: SessionConfig = { ...DEFAULT_SESSION_CONFIG, ...config };
+  if (!cfg.ladder && (cfg.mode === "progressive" || cfg.mode === "forever"))
+    cfg.ladder = progressiveLadder("t2n");
   const map: Record<string, SessionCard> = {};
   const phase: Record<string, ProgressivePhase> = {};
+  const step: Record<string, number> = {};
   for (const c of cards) {
     map[c.variantId] = c;
-    if (cfg.mode === "progressive") phase[c.variantId] = "choice";
+    if (cfg.ladder) {
+      phase[c.variantId] = cfg.ladder[0]?.kind ?? "choice";
+      step[c.variantId] = 0;
+    }
   }
   const state: SessionState = {
     config: cfg,
@@ -81,6 +120,7 @@ export function createSession(
     skipped: [],
     againCount: {},
     phase,
+    step,
     current: null,
     answers: [],
     prev: null,
@@ -153,12 +193,18 @@ export function answer(state: SessionState, grade: Grade, now: number): SessionS
         retry: [...next.retry, { variantId: id, dueAt: now + next.config.retryHardMs }],
       };
     }
-  } else if (next.config.mode === "progressive" && phase === "choice") {
-    // Passed multiple choice: come back for typing after a few other cards.
-    const insertAt = Math.min(next.queue.length, 3);
+  } else if (next.config.ladder && (state.step[id] ?? 0) + 1 < next.config.ladder.length) {
+    // Passed this step: come back for the next one after a few other cards.
+    const s = (state.step[id] ?? 0) + 1;
+    const insertAt = Math.min(next.queue.length, next.config.stepGapCards);
     const queue = next.queue.slice();
     queue.splice(insertAt, 0, id);
-    next = { ...next, queue, phase: { ...next.phase, [id]: "typing" } };
+    next = {
+      ...next,
+      queue,
+      step: { ...next.step, [id]: s },
+      phase: { ...next.phase, [id]: next.config.ladder[s]?.kind ?? "typing" },
+    };
   } else {
     next = { ...next, cleared: [...next.cleared, id] };
   }
@@ -183,6 +229,12 @@ export function regradeLast(state: SessionState, grade: Grade, now: number): Ses
   if (!last) return state;
   const rolled = { ...state.prev, current: last.variantId };
   return answer(rolled, grade, now);
+}
+
+/** The ladder step the current (or given) card is on, or null outside ladder modes. */
+export function currentStep(state: SessionState, id = state.current): SessionStep | null {
+  if (!id || !state.config.ladder) return null;
+  return state.config.ladder[state.step[id] ?? 0] ?? null;
 }
 
 export function lastAnswer(state: SessionState): AnswerRecord | undefined {

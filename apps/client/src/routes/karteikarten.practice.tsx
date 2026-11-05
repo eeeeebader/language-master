@@ -7,7 +7,7 @@ import { z } from "zod";
 import { Button, Card, Chip, Page } from "@/components/ui";
 import { db } from "@/db/db";
 import { t } from "@/lib/i18n";
-import type { Direction } from "@/lib/session-builder";
+import type { Direction, Focus } from "@/lib/session-builder";
 
 const Search = z.object({ lists: z.string().default("") });
 
@@ -22,7 +22,8 @@ const MODES: { id: SessionMode; tone: "sage" | "rose" | "lavender" | "amber" | "
   { id: "progressive", tone: "lavender" },
   { id: "forever", tone: "sky" },
 ];
-const SAMPLES = [0, 100, 150, 200, 250];
+const SAMPLES = [0, 15, 25, 50, 75, 100, 150, 200, 250];
+const FOCUS: Focus[] = ["new", "easy", "ok", "hard", "failed"];
 const OVERVIEWS = [0, 10, 15, 20];
 
 function Practice() {
@@ -41,6 +42,13 @@ function Practice() {
   const [direction, setDirection] = useState<Direction>("both");
   const [sample, setSample] = useState(0);
   const [overview, setOverview] = useState(10);
+  const [focus, setFocus] = useState<Set<Focus>>(new Set());
+  const toggleFocus = (f: Focus) => {
+    const n = new Set(focus);
+    if (n.has(f)) n.delete(f);
+    else n.add(f);
+    setFocus(n);
+  };
   const directional = mode === "progressive" || mode === "forever";
 
   function start() {
@@ -53,6 +61,7 @@ function Practice() {
         direction: directional ? direction : "t2n",
         sample,
         overview,
+        focus: [...focus].join(","),
         onboarding: 0,
       },
     });
@@ -124,6 +133,20 @@ function Practice() {
         </div>
       )}
 
+      <div className="mb-4">
+        <div className="mb-1 text-sm text-ink-2">{t("cards.focus")}</div>
+        <div className="flex flex-wrap gap-2">
+          <Chip active={focus.size === 0} onClick={() => setFocus(new Set())}>
+            {t("cards.focus.all")}
+          </Chip>
+          {FOCUS.map((f) => (
+            <Chip key={f} active={focus.has(f)} onClick={() => toggleFocus(f)}>
+              {t(`cards.focus.${f}` as "cards.focus.new")}
+            </Chip>
+          ))}
+        </div>
+      </div>
+
       <div className="mb-6">
         <div className="mb-1 text-sm text-ink-2">{t("cards.overview")}</div>
         <div className="flex flex-wrap gap-2">
@@ -136,9 +159,19 @@ function Practice() {
         <p className="mt-1 text-xs text-ink-3">{t("cards.overviewHint")}</p>
       </div>
 
-      <Button full size="lg" disabled={listIds.length === 0 || wordCount === 0} onClick={start}>
-        {t("common.start")}
-      </Button>
+      <div className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom)+0.75rem)] z-30 px-4">
+        <div className="mx-auto max-w-lg">
+          <Button
+            full
+            size="lg"
+            className="shadow-lg"
+            disabled={listIds.length === 0 || wordCount === 0}
+            onClick={start}
+          >
+            {t("common.start")}
+          </Button>
+        </div>
+      </div>
     </Page>
   );
 }

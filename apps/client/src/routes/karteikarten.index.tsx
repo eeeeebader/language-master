@@ -1,11 +1,11 @@
 import { isDue } from "@lm/srs";
-import { CaretRight, Plus, Trash } from "@phosphor-icons/react";
+import { CaretRight, Plus } from "@phosphor-icons/react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useLiveQuery } from "dexie-react-hooks";
 import { useState } from "react";
 import { Button, Card, Empty, Page } from "@/components/ui";
 import { db } from "@/db/db";
-import { createList, softDeleteList } from "@/db/repo";
+import { createList } from "@/db/repo";
 import { t } from "@/lib/i18n";
 
 export const Route = createFileRoute("/karteikarten/")({ component: Karteikarten });
@@ -114,19 +114,6 @@ function Karteikarten() {
                     {t("cards.words", { n: c.words })} · {t("cards.due", { n: c.due })}
                   </div>
                 </div>
-                {!l.isSystem && (
-                  <button
-                    type="button"
-                    className="rounded-full p-2 text-ink-3 hover:bg-white"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (confirm(`„${l.title}“ löschen? Wörter bleiben erhalten.`))
-                        softDeleteList(l.id);
-                    }}
-                  >
-                    <Trash size={18} />
-                  </button>
-                )}
                 <Link
                   to="/karteikarten/lists/$listId"
                   params={{ listId: l.id }}

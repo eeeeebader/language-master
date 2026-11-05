@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   answer,
   createSession,
+  currentStep,
   isFinished,
+  progressiveLadder,
   regradeLast,
   remaining,
   type SessionCard,
@@ -100,5 +102,34 @@ describe("session planner", () => {
     expect(sum.skipped).toEqual(["v0"]);
     expect(sum.cleared).toBe(1);
     expect(sum.durationMs).toBe(6000);
+  });
+});
+
+describe("progressive ladder", () => {
+  it("asks choice from the native language first, then typing target→native, then the rest", () => {
+    const cards = [
+      {
+        variantId: "a",
+        wordId: "w1",
+        front: "hola",
+        back: "hallo",
+        pos: "other" as const,
+        isNew: true,
+      },
+    ];
+    let s = createSession(cards, { mode: "progressive", ladder: progressiveLadder("both") }, 0);
+    expect(currentStep(s)).toEqual({ kind: "choice", dir: "n2t" });
+    s = answer(s, 2, 1);
+    expect(currentStep(s)).toEqual({ kind: "typing", dir: "t2n" });
+    s = answer(s, 3, 2); // Hard: same step, retried later
+    expect(isFinished(s)).toBe(false);
+    expect(currentStep(s)).toEqual({ kind: "typing", dir: "t2n" });
+    s = answer(s, 2, 3);
+    expect(currentStep(s)).toEqual({ kind: "choice", dir: "t2n" });
+    s = answer(s, 1, 4);
+    expect(currentStep(s)).toEqual({ kind: "typing", dir: "n2t" });
+    s = answer(s, 2, 5);
+    expect(isFinished(s)).toBe(true);
+    expect(s.cleared).toEqual(["a"]);
   });
 });

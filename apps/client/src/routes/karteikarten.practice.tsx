@@ -49,8 +49,6 @@ function Practice() {
     else n.add(f);
     setFocus(n);
   };
-  const directional = mode === "progressive" || mode === "forever";
-
   function start() {
     navigate({
       to: "/karteikarten/session",
@@ -58,7 +56,7 @@ function Practice() {
         mode,
         lists: listIds.join(","),
         filter: "all",
-        direction: directional ? direction : "t2n",
+        direction,
         sample,
         overview,
         focus: [...focus].join(","),
@@ -107,18 +105,16 @@ function Practice() {
         ))}
       </div>
 
-      {directional && (
-        <div className="mb-4">
-          <div className="mb-1 text-sm text-ink-2">{t("cards.direction")}</div>
-          <div className="flex flex-wrap gap-2">
-            {(["both", "t2n", "n2t"] as Direction[]).map((d) => (
-              <Chip key={d} active={direction === d} onClick={() => setDirection(d)}>
-                {t(`cards.direction.${d}` as "cards.direction.both")}
-              </Chip>
-            ))}
-          </div>
+      <div className="mb-4">
+        <div className="mb-1 text-sm text-ink-2">{t("cards.direction")}</div>
+        <div className="flex flex-wrap gap-2">
+          {(["both", "t2n", "n2t"] as Direction[]).map((d) => (
+            <Chip key={d} active={direction === d} onClick={() => setDirection(d)}>
+              {t(`cards.direction.${d}` as "cards.direction.both")}
+            </Chip>
+          ))}
         </div>
-      )}
+      </div>
 
       {mode !== "forever" && (
         <div className="mb-4">

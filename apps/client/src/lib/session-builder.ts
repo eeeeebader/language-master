@@ -117,7 +117,17 @@ export async function buildSession(opts: BuildOptions): Promise<SessionCard[]> {
   if (opts.forever) {
     const due = shuffle(cards.filter((c) => !c.isNew && isDue(states.get(c.variantId), now)));
     const fresh = shuffle(cards.filter((c) => c.isNew)).slice(0, opts.forever.newLimit);
-    return [...due, ...fresh];
+    if (due.length + fresh.length > 0) return [...due, ...fresh];
+    // Nothing due and the daily new-card budget is spent: practise ahead on the soonest-due cards.
+    const ahead = cards
+      .filter((c) => !c.isNew)
+      .sort(
+        (a, b) =>
+          new Date(states.get(a.variantId)?.due ?? 0).getTime() -
+          new Date(states.get(b.variantId)?.due ?? 0).getTime(),
+      )
+      .slice(0, 20);
+    return ahead;
   }
 
   cards = shuffle(cards);

@@ -1,14 +1,32 @@
+import type { CardState } from "@lm/schema";
 import { isDue } from "@lm/srs";
 import { CaretRight, Plus } from "@phosphor-icons/react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useLiveQuery } from "dexie-react-hooks";
 import { useState } from "react";
-import { Button, Card, Empty, Page } from "@/components/ui";
+import { Button, Card, cx, Empty, Page } from "@/components/ui";
 import { db } from "@/db/db";
 import { createList } from "@/db/repo";
 import { t } from "@/lib/i18n";
+import { type Rating, rateWord } from "@/lib/rating";
 
 export const Route = createFileRoute("/karteikarten/")({ component: Karteikarten });
+
+interface ListStats {
+  words: number;
+  due: number;
+  new: number;
+  weak: number;
+  ok: number;
+  strong: number;
+}
+const EMPTY_STATS: ListStats = { words: 0, due: 0, new: 0, weak: 0, ok: 0, strong: 0 };
+const STAT_TONE: Record<Rating, string> = {
+  new: "bg-sky-soft text-sky-deep",
+  weak: "bg-rose-soft text-rose-deep",
+  ok: "bg-amber-soft text-amber-deep",
+  strong: "bg-sage-soft text-sage-deep",
+};
 
 function Karteikarten() {
   const navigate = useNavigate();
@@ -16,7 +34,7 @@ function Karteikarten() {
   const counts =
     useLiveQuery(async () => {
       const now = new Date();
-      const out: Record<string, { words: number; due: number }> = {};
+      const out: Record<string, ListStats> = {};
       for (const l of await db.lists.filter((x) => !x.deletedAt).toArray()) {
         const lw = await db.listWords.where("listId").equals(l.id).toArray();
         const variants = await db.variants
@@ -27,7 +45,21 @@ function Karteikarten() {
         const dueWords = new Set(
           variants.filter((_, i) => isDue(states[i], now)).map((v) => v.wordId),
         );
-        out[l.id] = { words: lw.length, due: dueWords.size };
+        const stats: ListStats = {
+          words: lw.length,
+          due: dueWords.size,
+          new: 0,
+          weak: 0,
+          ok: 0,
+          strong: 0,
+        };
+        for (const x of lw) {
+          const ws = variants
+            .map((v, i) => (v.wordId === x.wordId ? states[i] : undefined))
+            .filter((s): s is CardState => !!s);
+          stats[rateWord(ws, now).rating]++;
+        }
+        out[l.id] = stats;
       }
       return out;
     }, []) ?? {};
@@ -97,7 +129,7 @@ function Karteikarten() {
       {lists.length === 0 && <Empty>{t("cards.noLists")}</Empty>}
       <div className="grid gap-2 pb-24">
         {lists.map((l) => {
-          const c = counts[l.id] ?? { words: 0, due: 0 };
+          const c = counts[l.id] ?? EMPTY_STATS;
           const on = selected.has(l.id);
           return (
             <Card
@@ -107,12 +139,26 @@ function Karteikarten() {
               onClick={() => toggle(l.id)}
             >
               <div className="flex items-center gap-3">
-                <input type="checkbox" readOnly checked={on} className="h-5 w-5" />
                 <div className="flex-1">
                   <div className="font-bold">{l.title}</div>
                   <div className="text-sm text-ink-2">
                     {t("cards.words", { n: c.words })} · {t("cards.due", { n: c.due })}
                   </div>
+                  {c.words > 0 && (
+                    <div className="mt-1.5 flex flex-wrap gap-1">
+                      {(["new", "weak", "ok", "strong"] as const).map((r) => (
+                        <span
+                          key={r}
+                          className={cx(
+                            "rounded-chip px-2 py-0.5 text-xs",
+                            c[r] > 0 ? STAT_TONE[r] : "bg-paper-2 text-ink-3",
+                          )}
+                        >
+                          {c[r]} {t(`cards.stat.${r}` as "cards.stat.new")}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <Link
                   to="/karteikarten/lists/$listId"

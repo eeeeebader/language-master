@@ -125,7 +125,7 @@ function Home() {
                 mode: "forever",
                 lists: "",
                 filter: "due",
-                direction: "t2n",
+                direction: "both",
                 sample: 0,
                 onboarding: 0,
               },

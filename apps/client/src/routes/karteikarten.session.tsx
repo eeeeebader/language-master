@@ -182,8 +182,13 @@ function Session() {
         // Distractors must answer in the same direction as the shown card.
         const dir = cardDir;
         // Sibling variants of the same word (nuevo / nueva) would be a second right answer.
+        const seenWords = new Set<string>();
         const oriented = pool
-          .filter((p) => p.wordId !== current.wordId)
+          .filter((p) => {
+            if (p.wordId === current.wordId || seenWords.has(p.wordId)) return false;
+            seenWords.add(p.wordId);
+            return true;
+          })
           .map((p) => ({
             id: p.id,
             wordId: p.wordId,

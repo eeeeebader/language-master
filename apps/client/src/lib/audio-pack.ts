@@ -24,6 +24,8 @@ let state: AudioState = { status: "none", available: false };
 let sql: SqlJsStatic | null = null;
 const KEY = "lm.audio.installed";
 const TIER_KEY = "lm.audio.tier";
+/** Checksum of the installed pack: a re-published pack of the same version still updates. */
+const SHA_KEY = "lm.audio.sha";
 
 function installedTier(): AudioTier {
   return localStorage.getItem(TIER_KEY) === "full" ? "full" : "core";
@@ -31,8 +33,8 @@ function installedTier(): AudioTier {
 
 function packOf(m: PackManifest, tier: AudioTier) {
   return tier === "full"
-    ? { url: m.audio_full_url, bytes: m.audio_full_bytes }
-    : { url: m.audio_url, bytes: m.audio_bytes };
+    ? { url: m.audio_full_url, bytes: m.audio_full_bytes, sha: m.audio_full_sha256 }
+    : { url: m.audio_url, bytes: m.audio_bytes, sha: m.audio_sha256 };
 }
 
 function set(s: AudioState) {
@@ -76,7 +78,9 @@ export async function initAudio(target = "es", native = "de"): Promise<void> {
       clips: await db.audioClips.count(),
       fullBytes: m.audio_full_bytes,
     });
-    if (m.version > installed && packOf(m, tier).url) await installAudio(tier, target, native);
+    const pack = packOf(m, tier);
+    const stale = pack.sha ? pack.sha !== localStorage.getItem(SHA_KEY) : m.version > installed;
+    if (stale && pack.url) await installAudio(tier, target, native);
     return;
   }
   await installAudio("core", target, native);
@@ -145,6 +149,8 @@ export async function installAudio(
     database.close();
     localStorage.setItem(KEY, String(m.version));
     localStorage.setItem(TIER_KEY, tier);
+    if (pack.sha) localStorage.setItem(SHA_KEY, pack.sha);
+    else localStorage.removeItem(SHA_KEY);
     set({ status: "ready", tier, version: m.version, clips: done, fullBytes: m.audio_full_bytes });
   } catch (e) {
     set({ status: "error", message: e instanceof Error ? e.message : String(e) });

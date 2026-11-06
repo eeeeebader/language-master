@@ -87,6 +87,8 @@ const de = {
   "cards.sentence.text": "Spanischer Satz",
   "cards.sentence.translation": "Übersetzung",
   "cards.inDictionary": "Im Wörterbuch",
+  "cards.wordPage": "Zum Wort",
+  "cards.word": "Wort",
   "cards.removeFromList": "Aus Liste entfernen",
   "session.dontKnow": "Weiß ich nicht",
   "session.back": "Zurück",

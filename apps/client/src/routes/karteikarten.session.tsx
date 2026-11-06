@@ -1,4 +1,4 @@
-import type { Grade, PromptKind, SessionMode, WordSentence } from "@lm/schema";
+import type { Grade, PromptKind, SessionMode } from "@lm/schema";
 import {
   answersMatch,
   calibrateBase,
@@ -18,20 +18,15 @@ import {
   summarise,
   toLocalDay,
 } from "@lm/srs";
-import {
-  ArrowCounterClockwise,
-  ArrowLeft,
-  ChatCircleText,
-  SpeakerHigh,
-  X,
-} from "@phosphor-icons/react";
+import { ArrowCounterClockwise, ArrowLeft, SpeakerHigh, X } from "@phosphor-icons/react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
 import { Confetti } from "@/components/Confetti";
 import { FlipCard } from "@/components/FlipCard";
 import { GradeChips } from "@/components/GradeChips";
-import { Button, Card, cx, Page, Sheet } from "@/components/ui";
+import { Button, Card, cx, Page } from "@/components/ui";
+import { WordInfoSheet } from "@/components/WordInfoSheet";
 import { db } from "@/db/db";
 import { bumpActivity, getSettings, overrideReview, recordReview } from "@/db/repo";
 import * as haptics from "@/lib/haptics";
@@ -90,12 +85,11 @@ function Session() {
   const [lastEventId, setLastEventId] = useState<string | null>(null);
   const [lastCorrect, setLastCorrect] = useState<boolean | null>(null);
   const [lastCard, setLastCard] = useState<SessionCard | null>(null);
-  const [sentences, setSentences] = useState<WordSentence[] | null>(null);
+  const [infoWord, setInfoWord] = useState<string | null>(null);
   const [newLimitLeft, setNewLimitLeft] = useState(0);
   const [canGoBack, setCanGoBack] = useState(false);
   const [recent, setRecent] = useState<SessionCard[]>([]);
   const [sinceOverview, setSinceOverview] = useState(0);
-  const [overviewSentences, setOverviewSentences] = useState<Record<string, WordSentence>>({});
   const [peek, setPeek] = useState(false);
   const shownAt = useRef(0);
   const reactionRef = useRef<number | null>(null);
@@ -279,12 +273,7 @@ function Session() {
     setStage("front");
   }
 
-  async function openOverview() {
-    const ids = recent.slice(-overviewEvery).map((c) => c.wordId);
-    const rows = await db.sentences.where("wordId").anyOf(ids).toArray();
-    const map: Record<string, WordSentence> = {};
-    for (const r of rows.sort((a, b) => a.position - b.position)) map[r.wordId] ??= r;
-    setOverviewSentences(map);
+  function openOverview() {
     setSinceOverview(0);
     setStage("overview");
   }
@@ -379,11 +368,6 @@ function Session() {
       baseMs,
     });
     commit(grade, ms, false, correct);
-  }
-
-  async function openSentences() {
-    if (!current) return;
-    setSentences(await db.sentences.where("wordId").equals(current.wordId).toArray());
   }
 
   function doSkip() {
@@ -498,8 +482,12 @@ function Session() {
               const g = lastGradeOf.get(c.variantId);
               const skippedCard = skippedSet.has(c.variantId);
               return (
-                <Card key={c.variantId} className="flex items-center gap-3 py-3">
-                  <div className="min-w-0 flex-1 font-bold">
+                <Card
+                  key={c.variantId}
+                  className="flex items-center gap-3 py-3"
+                  onClick={() => setInfoWord(c.wordId)}
+                >
+                  <div className="min-w-0 flex-1 truncate font-bold">
                     {target} <span className="font-normal text-ink-2">· {native}</span>
                   </div>
                   {skippedCard ? (
@@ -514,7 +502,10 @@ function Session() {
                   <button
                     type="button"
                     className="rounded-full bg-sky-soft p-2 text-sky-deep"
-                    onClick={() => speak(target)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      speak(target);
+                    }}
                     aria-label="Aussprache"
                   >
                     <SpeakerHigh size={16} />
@@ -532,6 +523,7 @@ function Session() {
             {search.onboarding ? t("common.next") : t("common.back")}
           </Button>
         </div>
+        <WordInfoSheet wordId={infoWord} onClose={() => setInfoWord(null)} />
       </Page>
     );
   }
@@ -560,11 +552,14 @@ function Session() {
               state.config.ladder && c.variantId in state.step
                 ? `${Math.min((state.step[c.variantId] ?? 0) + 1, state.config.ladder.length)}/${state.config.ladder.length}`
                 : null;
-            const sentence = overviewSentences[c.wordId];
             return (
-              <Card key={c.variantId} className="flex items-start gap-3">
+              <Card
+                key={c.variantId}
+                className="flex items-center gap-3"
+                onClick={() => setInfoWord(c.wordId)}
+              >
                 <div className="min-w-0 flex-1">
-                  <div className="font-bold">
+                  <div className="truncate font-bold">
                     {target} <span className="font-normal text-ink-2">· {native}</span>
                     {stepLabel && (
                       <span className="ml-2 rounded-chip bg-paper-2 px-2 py-0.5 text-xs font-normal text-ink-3">
@@ -572,17 +567,14 @@ function Session() {
                       </span>
                     )}
                   </div>
-                  {sentence && (
-                    <div className="mt-1 text-sm text-ink-2">
-                      <span className="italic">{sentence.text}</span>
-                      <span className="text-ink-3"> – {sentence.translation}</span>
-                    </div>
-                  )}
                 </div>
                 <button
                   type="button"
                   className="rounded-full bg-sky-soft p-2 text-sky-deep"
-                  onClick={() => speak(target)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    speak(target);
+                  }}
                   aria-label="Aussprache"
                 >
                   <SpeakerHigh size={18} />
@@ -594,6 +586,7 @@ function Session() {
         <Button full size="lg" className="mt-6" onClick={() => setStage("front")}>
           {t("session.continue")}
         </Button>
+        <WordInfoSheet wordId={infoWord} onClose={() => setInfoWord(null)} />
       </Page>
     );
   }
@@ -639,18 +632,6 @@ function Session() {
               back={shown.back}
               flipped={stage !== "front" && !peek}
               onFlip={() => (stage === "front" ? reveal() : stage === "result" && togglePeek())}
-              footer={
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-1 rounded-chip bg-white px-3 py-1 text-sm text-ink-2"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    openSentences();
-                  }}
-                >
-                  <ChatCircleText size={16} /> {t("session.sentences")}
-                </button>
-              }
             />
             <div className="mt-6">
               {stage === "front" && (
@@ -782,29 +763,6 @@ function Session() {
           Tageslimit für neue Karten erreicht – du kannst gleich trotzdem weitere dazunehmen.
         </p>
       )}
-
-      <Sheet
-        open={sentences !== null}
-        onClose={() => setSentences(null)}
-        title={t("session.sentences")}
-      >
-        {sentences?.length === 0 && <p className="text-ink-2">Noch keine Sätze zu diesem Wort.</p>}
-        <div className="space-y-3">
-          {sentences?.map((s) => (
-            <div key={s.id} className="rounded-card bg-white p-3">
-              <div className="font-semibold">{s.text}</div>
-              <div className="text-sm text-ink-2">{s.translation}</div>
-              <div className="mt-1 text-xs text-ink-3">
-                {s.source === "story"
-                  ? "aus Geschichte"
-                  : s.source === "dictionary"
-                    ? "Wörterbuch"
-                    : "eigener Satz"}
-              </div>
-            </div>
-          ))}
-        </div>
-      </Sheet>
     </Page>
   );
 }

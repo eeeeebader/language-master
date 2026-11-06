@@ -53,7 +53,7 @@ const publicUrl = `${process.env.PUBLIC_SUPABASE_URL ?? url}/storage/v1/object/p
 
 // 3. register
 const row = {
-  id: `${manifest.target}-${manifest.native}-v${manifest.version}${manifest.with_audio ? "-audio" : ""}`,
+  id: `${manifest.target}-${manifest.native}-v${manifest.version}${manifest.with_audio ? `-audio-${manifest.audio_tier ?? "core"}` : ""}`,
   target: manifest.target,
   native: manifest.native,
   version: manifest.version,
@@ -61,6 +61,7 @@ const row = {
   bytes: manifest.bytes,
   sha256: manifest.sha256,
   with_audio: manifest.with_audio,
+  audio_tier: manifest.with_audio ? (manifest.audio_tier ?? "core") : null,
   published_at: publish ? new Date().toISOString() : null,
 };
 r = await fetch(`${url}/rest/v1/dictionary_packs?on_conflict=id`, {

@@ -51,6 +51,31 @@ export const StoryDocument = z.object({
 });
 export type StoryDocument = z.infer<typeof StoryDocument>;
 
+/** Sentence as read aloud: token surfaces with their trailing whitespace. */
+export function sentenceText(s: StorySentence): string {
+  return s.tokens
+    .map((tk) => tk.text + tk.ws)
+    .join("")
+    .trim();
+}
+
+/** The whole story as one text (paragraphs separated by a blank line). */
+export function storyText(doc: Pick<StoryDocument, "paragraphs">): string {
+  return doc.paragraphs.map((p) => p.map(sentenceText).join(" ")).join("\n\n");
+}
+
+/** Every text worth voicing for a story: each word form, each sentence, the whole story. */
+export function storyAudioTexts(doc: Pick<StoryDocument, "paragraphs">): string[] {
+  const out = new Set<string>();
+  for (const p of doc.paragraphs)
+    for (const s of p) {
+      for (const tk of s.tokens) if (tk.isWord && tk.text.trim()) out.add(tk.text.trim());
+      out.add(sentenceText(s));
+    }
+  out.add(storyText(doc));
+  return [...out].filter(Boolean);
+}
+
 export const StoryTheme = z.enum([
   "coming_of_age",
   "daily_shopping",

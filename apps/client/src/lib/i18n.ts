@@ -181,6 +181,8 @@ const de = {
   "stories.offlineNote":
     "Die KI-Erstellung braucht den Server und kommt mit Version 0.2. Die Beispielgeschichten unten zeigen den Reader mit Grammatik-Highlights.",
   "stories.vocab": "Vokabeln dieser Geschichte",
+  "stories.readAloud": "Geschichte anhören",
+  "stories.stopReading": "Stopp",
   "stories.test": "Vokabeln testen",
   "stories.addSelected": "Ausgewählte hinzufügen",
   "stories.finished": "Geschichte gelesen",

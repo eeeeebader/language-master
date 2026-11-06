@@ -14,6 +14,8 @@ COPY packages/database/package.json packages/database/
 RUN pnpm install --frozen-lockfile --filter @lm/api...
 
 FROM deps AS runtime
+# ffmpeg turns Piper's WAV into Opus for story clips and on-demand speech.
+RUN apk add --no-cache ffmpeg
 ENV NODE_ENV=production
 COPY packages/schema packages/schema
 COPY packages/srs packages/srs

@@ -333,10 +333,14 @@ export const dictionaryPacks = pgTable(
     bytes: bigint("bytes", { mode: "number" }).notNull(),
     sha256: text("sha256").notNull(),
     withAudio: boolean("with_audio").notNull().default(false),
+    /** Audio packs only: "core" (auto-installed) or "full" (opt-in). */
+    audioTier: text("audio_tier"),
     publishedAt: timestamp("published_at", { withTimezone: true }),
     createdAt: now(),
   },
-  (t) => [uniqueIndex("dictionary_packs_uq").on(t.target, t.native, t.version, t.withAudio)],
+  (t) => [
+    uniqueIndex("dictionary_packs_uq").on(t.target, t.native, t.version, t.withAudio, t.audioTier),
+  ],
 );
 
 export const stories = pgTable(

@@ -1,10 +1,11 @@
 import { type Db, llmUsage, reviewEvents, stories, userWords } from "@lm/database";
-import { StoryRequest } from "@lm/schema";
+import { StoryRequest, storyAudioTexts } from "@lm/schema";
 import { and, desc, eq, gte, isNotNull, isNull, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { log } from "../lib/log";
 import { recordStory } from "../lib/ops";
 import type { GenerationLimiter } from "../lib/rateLimit";
+import { renderMany } from "../lib/speech";
 import { ulid } from "../lib/ulid";
 import type { SettingsStore } from "../settings";
 import type { createPipeline } from "../stories/pipeline";
@@ -15,6 +16,8 @@ export interface StoriesDeps {
   settings: SettingsStore;
   limiter: GenerationLimiter;
   pipeline: ReturnType<typeof createPipeline>;
+  /** Piper endpoint; when set, every story ships with its clips so it reads offline. */
+  piperUrl?: string;
 }
 
 /** Strongest known lemmas by stability, optionally restricted to the chosen source lists. */
@@ -184,10 +187,19 @@ export function storyRoutes(deps: StoriesDeps) {
         coverage: result.coverage,
         costCents: cost,
       });
+      // Last step: voice every word form, sentence and the whole story so the reader needs no server.
+      const audio = deps.piperUrl
+        ? (await renderMany(deps.piperUrl, storyAudioTexts(result.document))).map((clip) => ({
+            key: clip.key,
+            mime: clip.mime,
+            b64: Buffer.from(clip.bytes).toString("base64"),
+          }))
+        : [];
       return c.json({
         story: result.document,
         payment: reservation.payment,
         coverage: result.coverage,
+        audio,
       });
     } catch (e) {
       recordStory("error");

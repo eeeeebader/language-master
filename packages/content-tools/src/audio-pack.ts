@@ -35,11 +35,17 @@ export function insertClip(
   ]);
 }
 
-/** Texts worth voicing for a dictionary pack: headwords, plurals and feminine forms. */
-export function packAudioTexts(db: SqliteLike): string[] {
+/**
+ * Texts worth voicing for a dictionary pack: headwords, plurals and feminine forms.
+ * With `top`, only lemmas ranked within the most frequent `top` (the core pack).
+ */
+export function packAudioTexts(db: SqliteLike, top?: number): string[] {
   const out = new Set<string>();
+  const where = top
+    ? `WHERE frequency_rank IS NOT NULL AND frequency_rank <= ${Math.floor(top)}`
+    : "";
   for (const r of db.all<{ lemma: string; plural: string | null; gender_pair: string | null }>(
-    "SELECT lemma, plural, gender_pair FROM lemma",
+    `SELECT lemma, plural, gender_pair FROM lemma ${where}`,
   )) {
     out.add(r.lemma);
     if (r.plural) out.add(r.plural.replace(/^(los|las|los\/las)\s+/, ""));

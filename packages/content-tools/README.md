@@ -1,18 +1,25 @@
 ## Audio pack build
 
-Clips are rendered by Piper (`docker/piper`, voice `es_ES-davefx-medium`), converted to 48 kbps mono
-MP3 with ffmpeg and packed into one SQLite file keyed by the exact voiced text. The client extracts
-the rows into IndexedDB and plays a clip before falling back to the device's speech synthesis.
+Clips are rendered by Piper (`docker/piper`, voice `es_ES-davefx-medium`), converted to 24 kbps mono
+Opus with ffmpeg and packed into one SQLite file keyed by the exact voiced text. Two tiers:
+
+- `core` (default): the 8,000 most frequent headwords with plurals and feminine forms, plus every
+  lecture and official-story text (word forms, sentences, whole story). The app installs it for
+  everyone in the background, right after the dictionary pack.
+- `full`: every headword. Offered as an opt-in download in the settings.
 
 ```bash
 docker build -t lm-piper:dev docker/piper && docker run -d -p 127.0.0.1:5005:5000 lm-piper:dev
 PIPER_URL=http://localhost:5005 pnpm build-audio-pack --pack dist/es-de.v2.sqlite \
-  --lectures ../../apps/client/src/data/lectures-es.ts --out dist --version 2
-node ../../infra/scripts/publish-pack.mjs --file dist/es-de.v2.audio.sqlite --manifest dist/es-de.v2.audio.manifest.json --publish
+  --lectures ../../apps/client/src/data/lectures-es.ts --stories ../../apps/client/src/data/stories-es.ts \
+  --out dist --version 2 --tier core
+PIPER_URL=http://localhost:5005 pnpm build-audio-pack --pack dist/es-de.v2.sqlite --out dist --version 2 --tier full
+node ../../infra/scripts/publish-pack.mjs --file dist/es-de.v2.audio-core.sqlite --manifest dist/es-de.v2.audio-core.manifest.json --publish
 ```
 
-The audio pack shares the dictionary pack's version; the manifest endpoint reports `with_audio`
-and `audio_url` when both are published.
+The audio packs share the dictionary pack's version; the manifest endpoint reports `audio_url`
+(core) and `audio_full_url` (full) when published. Texts no pack covers are rendered on demand by
+the API (`GET /packs/tts`) and cached on the device; generated stories ship with their own clips.
 
 ## Dictionary pack build (two Wiktionary extracts)
 

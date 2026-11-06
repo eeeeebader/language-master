@@ -1,5 +1,6 @@
 import type { StoryDocument, StoryRequest } from "@lm/schema";
 import { db } from "@/db/db";
+import { storeClips } from "./audio-pack";
 import { API_URL, getAccessToken, isCloudEnabled } from "./auth";
 
 export type GenerateOutcome =
@@ -25,12 +26,14 @@ export async function generateStory(request: StoryRequest): Promise<GenerateOutc
     story?: StoryDocument;
     payment?: string;
     coverage?: number;
+    audio?: { key: string; mime: string; b64: string }[];
     error?: string;
     reason?: string;
   };
   if (!res.ok || !body.story)
     return { ok: false, error: body.error ?? `http_${res.status}`, reason: body.reason };
   await db.stories.put({ ...body.story, archived: false });
+  await storeClips(body.audio ?? []);
   return {
     ok: true,
     storyId: body.story.id,

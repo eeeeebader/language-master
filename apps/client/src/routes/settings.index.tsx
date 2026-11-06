@@ -6,7 +6,7 @@ import { saveSettings } from "@/db/repo";
 import { useAudioState } from "@/hooks/useAudio";
 import { usePackState } from "@/hooks/usePack";
 import { useSettings } from "@/hooks/useSettings";
-import { installAudio, removeAudio } from "@/lib/audio-pack";
+import { installAudio, removeFullAudio } from "@/lib/audio-pack";
 import { ensurePack, removePack } from "@/lib/dict-pack";
 import { t } from "@/lib/i18n";
 import { analyticsAvailable, analyticsOptedOut, setAnalyticsOptOut } from "@/lib/telemetry";
@@ -124,37 +124,49 @@ function Settings() {
             <div className="font-medium">Audio (Aussprache)</div>
             <div className="text-sm text-ink-2">
               {audio.status === "ready"
-                ? `Audiopaket v${audio.version} · ${audio.clips.toLocaleString("de-DE")} Clips · offline`
+                ? `${audio.tier === "full" ? "Komplettes" : "Kern-"}Audiopaket v${audio.version} · ${audio.clips.toLocaleString("de-DE")} Clips · offline`
                 : audio.status === "downloading"
-                  ? `Lädt … ${Math.round((audio.received / Math.max(1, audio.total)) * 100)} %`
+                  ? `${audio.tier === "full" ? "Komplettes Paket" : "Kernpaket"} lädt … ${Math.round((audio.received / Math.max(1, audio.total)) * 100)} %`
                   : audio.status === "extracting"
                     ? `Entpacke … ${audio.done}/${audio.total}`
                     : audio.status === "error"
                       ? `Fehler: ${audio.message}`
                       : audio.available
-                        ? `Optionales Audiopaket verfügbar ${mb(audio.bytes)} – sonst Sprachausgabe des Geräts`
+                        ? "Kernpaket wird im Hintergrund geladen"
                         : "Sprachausgabe des Geräts (kein Audiopaket verfügbar)"}
             </div>
+            {audio.status === "ready" && audio.tier === "core" && audio.fullBytes && (
+              <div className="mt-1 text-xs text-ink-3">
+                Das komplette Paket ({mb(audio.fullBytes)}) spricht jedes Wörterbuchwort offline.
+              </div>
+            )}
           </div>
           <div className="flex gap-1">
-            {audio.status === "ready" ? (
+            {audio.status === "ready" && audio.tier === "full" ? (
               <button
                 type="button"
                 className="rounded-chip bg-paper-2 px-3 py-1.5 text-sm"
-                onClick={() => removeAudio()}
+                onClick={() => removeFullAudio()}
               >
-                Entfernen
+                Nur Kernpaket
               </button>
-            ) : (
+            ) : audio.status === "ready" && audio.fullBytes ? (
               <button
                 type="button"
                 className="rounded-chip bg-paper-2 px-3 py-1.5 text-sm"
-                disabled={audio.status !== "none" || !audio.available}
-                onClick={() => installAudio()}
+                onClick={() => installAudio("full")}
               >
-                Laden
+                Komplett laden
               </button>
-            )}
+            ) : audio.status === "error" ? (
+              <button
+                type="button"
+                className="rounded-chip bg-paper-2 px-3 py-1.5 text-sm"
+                onClick={() => installAudio("core")}
+              >
+                Erneut laden
+              </button>
+            ) : null}
           </div>
         </div>
       </Card>

@@ -1,10 +1,14 @@
 /**
- * Render clips through Piper and pack them as MP3 (48 kbps mono) into an audio pack.
+ * Render clips through Piper and pack them as Opus (24 kbps mono) into an audio pack.
  *
  *   PIPER_URL=http://localhost:5000 pnpm build-audio-pack --pack dist/es-de.v2.sqlite \
- *     --lectures ../../apps/client/src/data/lectures-es.ts --out dist --version 2 [--limit 50] [--concurrency 4]
+ *     --lectures ../../apps/client/src/data/lectures-es.ts --stories ../../apps/client/src/data/stories-es.ts \
+ *     --out dist --version 2 [--tier core|full] [--top 8000] [--limit 50] [--concurrency 4]
  *
- * Needs ffmpeg on PATH. Output: dist/es-de.v2.audio.sqlite + dist/es-de.v2.audio.manifest.json.
+ * Tiers: `core` (default) voices the `--top` most frequent lemmas plus every lecture and official
+ * story text, and is installed for everyone in the background; `full` voices every headword and
+ * is an opt-in download. Needs ffmpeg on PATH. Output: dist/es-de.v2.audio-<tier>.sqlite plus
+ * dist/es-de.v2.audio-<tier>.manifest.json.
  * A native speaker reviews the alphabet and numbers, which Piper gets wrong most often.
  */
 import { spawn } from "node:child_process";
@@ -12,7 +16,7 @@ import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import type { Lecture } from "@lm/schema";
+import { type Lecture, type StoryDocument, storyAudioTexts } from "@lm/schema";
 import { createAudioPackSchema, insertClip, packAudioTexts } from "../audio-pack";
 import { audioTexts } from "../lectures";
 import { openNodeSqlite } from "../sqlite";
@@ -22,7 +26,7 @@ function arg(name: string, def?: string): string | undefined {
   return i >= 0 ? process.argv[i + 1] : def;
 }
 
-function toMp3(wav: Buffer): Promise<Buffer> {
+function toOpus(wav: Buffer): Promise<Buffer> {
   return new Promise((res, rej) => {
     const p = spawn("ffmpeg", [
       "-loglevel",
@@ -31,12 +35,12 @@ function toMp3(wav: Buffer): Promise<Buffer> {
       "pipe:0",
       "-ac",
       "1",
-      "-ar",
-      "22050",
+      "-c:a",
+      "libopus",
       "-b:a",
-      "48k",
+      "24k",
       "-f",
-      "mp3",
+      "ogg",
       "pipe:1",
     ]);
     const chunks: Buffer[] = [];
@@ -73,6 +77,9 @@ async function main() {
   const base = process.env.PIPER_URL ?? "http://localhost:5000";
   const packPath = arg("pack");
   const lecturesPath = arg("lectures");
+  const storiesPath = arg("stories");
+  const tier = arg("tier", "core") as "core" | "full";
+  const top = Number(arg("top", "8000"));
   const out = arg("out", "dist") as string;
   const version = Number(arg("version", "1"));
   const limit = Number(arg("limit", String(Number.MAX_SAFE_INTEGER)));
@@ -82,7 +89,7 @@ async function main() {
 
   const texts = new Set<string>();
   const pack = await openNodeSqlite(packPath);
-  for (const t of packAudioTexts(pack)) texts.add(t);
+  for (const t of packAudioTexts(pack, tier === "core" ? top : undefined)) texts.add(t);
   pack.close();
   if (lecturesPath) {
     const mod = (await import(pathToFileURL(resolve(lecturesPath)).href)) as {
@@ -90,18 +97,25 @@ async function main() {
     };
     for (const l of mod.LECTURES_ES) for (const t of audioTexts(l)) texts.add(t.text);
   }
+  if (storiesPath) {
+    const mod = (await import(pathToFileURL(resolve(storiesPath)).href)) as {
+      OFFICIAL_STORIES: StoryDocument[];
+    };
+    for (const d of mod.OFFICIAL_STORIES) for (const t of storyAudioTexts(d)) texts.add(t);
+  }
   const list = [...texts].slice(0, limit);
-  console.log(`${list.length} texts to voice with ${voice}`);
+  console.log(`${list.length} texts to voice with ${voice} (${tier} pack)`);
 
   mkdirSync(out, { recursive: true });
-  const file = join(out, `es-de.v${version}.audio.sqlite`);
+  const file = join(out, `es-de.v${version}.audio-${tier}.sqlite`);
   const db = await openNodeSqlite(file);
   createAudioPackSchema(db, {
     target: "es",
     native: "de",
     version: String(version),
     voice,
-    codec: "mp3 48k mono 22050",
+    tier,
+    codec: "opus 24k mono",
     built_at: new Date().toISOString(),
   });
   let done = 0;
@@ -113,8 +127,8 @@ async function main() {
       const text = list[i++] as string;
       try {
         const wav = await render(base, voice, text);
-        const mp3 = await toMp3(wav);
-        insertClip(db, text, "audio/mpeg", mp3, wavMs(wav));
+        const opus = await toOpus(wav);
+        insertClip(db, text, "audio/ogg", opus, wavMs(wav));
         done++;
         if (done % 200 === 0) console.log(`${done}/${list.length}`);
       } catch (e) {
@@ -130,8 +144,8 @@ async function main() {
   const bytes = statSync(file).size;
   const sha256 = createHash("sha256").update(readFileSync(file)).digest("hex");
   writeFileSync(
-    join(out, `es-de.v${version}.audio.manifest.json`),
-    `${JSON.stringify({ target: "es", native: "de", version, url: "", bytes, sha256, with_audio: true, published_at: new Date().toISOString() }, null, 2)}\n`,
+    join(out, `es-de.v${version}.audio-${tier}.manifest.json`),
+    `${JSON.stringify({ target: "es", native: "de", version, url: "", bytes, sha256, with_audio: true, audio_tier: tier, published_at: new Date().toISOString() }, null, 2)}\n`,
   );
   console.log(`wrote ${file}: ${done} clips (${failed} failed), ${bytes} bytes, sha256 ${sha256}`);
 }

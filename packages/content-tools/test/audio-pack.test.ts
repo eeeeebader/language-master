@@ -1,3 +1,4 @@
+import { storyAudioTexts } from "@lm/schema";
 import { describe, expect, it } from "vitest";
 import { audioKey, createAudioPackSchema, insertClip, packAudioTexts } from "../src/audio-pack";
 import { buildPack } from "../src/pack";
@@ -53,4 +54,25 @@ describe("audio pack", () => {
       db.close();
     },
   );
+
+  it("voices every word form, sentence and the whole story once", () => {
+    const w = (text: string, ws = " ") => ({
+      text,
+      lemma: text,
+      pos: "other" as const,
+      ws,
+      isWord: true,
+    });
+    const dot = { text: ".", lemma: ".", pos: "other" as const, ws: "", isWord: false };
+    const doc = {
+      paragraphs: [
+        [
+          { id: "a", translation: "", tokens: [w("Hola", ""), dot] },
+          { id: "b", translation: "", tokens: [w("Hola"), w("Ana", ""), dot] },
+        ],
+      ],
+    };
+    const texts = storyAudioTexts(doc);
+    expect(texts).toEqual(["Hola", "Hola.", "Ana", "Hola Ana.", "Hola. Hola Ana."]);
+  });
 });

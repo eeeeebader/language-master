@@ -98,7 +98,7 @@ export function createApp(db: Db, env: Env, state: AppState) {
   };
   const pipeline = async (input: Parameters<ReturnType<typeof createPipeline>>[0]) =>
     createPipeline(await llmConfig(), createAnnotator(env.NLP_URL))(input);
-  app.route("/stories", storyRoutes({ db, settings, limiter, pipeline }));
+  app.route("/stories", storyRoutes({ db, settings, limiter, pipeline, piperUrl: env.PIPER_URL }));
 
   const annotateOfficial: ReturnType<typeof createOfficialAnnotator> = async (input, now) =>
     createOfficialAnnotator(await llmConfig(), createAnnotator(env.NLP_URL))(input, now);

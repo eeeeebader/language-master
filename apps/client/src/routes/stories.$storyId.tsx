@@ -1,6 +1,12 @@
-import type { GrammarSpan, StorySentence, StoryToken } from "@lm/schema";
+import {
+  type GrammarSpan,
+  type StorySentence,
+  type StoryToken,
+  sentenceText,
+  storyText,
+} from "@lm/schema";
 import { normaliseAnswer, toLocalDay } from "@lm/srs";
-import { ArrowLeft, Plus, SpeakerHigh } from "@phosphor-icons/react";
+import { ArrowLeft, Plus, SpeakerHigh, Stop } from "@phosphor-icons/react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useLiveQuery } from "dexie-react-hooks";
 import { useEffect, useMemo, useState } from "react";
@@ -21,7 +27,7 @@ import { getEntryByLemma, searchDictionary } from "@/lib/dictionary";
 import { t } from "@/lib/i18n";
 import { play } from "@/lib/sound";
 import { track } from "@/lib/telemetry";
-import { speak } from "@/lib/tts";
+import { speak, speakStory, stopSpeaking } from "@/lib/tts";
 
 export const Route = createFileRoute("/stories/$storyId")({ component: Reader });
 
@@ -45,6 +51,24 @@ function Reader() {
   const [listId, setListId] = useState<string | null>(null);
   const [pickEntry, setPickEntry] = useState<ReturnType<typeof getEntryByLemma> | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [reading, setReading] = useState<AbortController | null>(null);
+
+  function toggleReading() {
+    if (reading) {
+      reading.abort();
+      stopSpeaking();
+      setReading(null);
+      return;
+    }
+    if (!story) return;
+    const ctl = new AbortController();
+    setReading(ctl);
+    const sentences = story.paragraphs.flat().map(sentenceText);
+    speakStory(storyText(story), sentences, ctl.signal).finally(() => {
+      setReading((r) => (r === ctl ? null : r));
+    });
+  }
+  useEffect(() => () => stopSpeaking(), []);
 
   // Reading time counts towards the daily minutes (flushed every minute and on leave).
   useEffect(() => {
@@ -298,6 +322,20 @@ function Reader() {
         </div>
       )}
 
+      <div className="mb-4 flex justify-center">
+        <button
+          type="button"
+          onClick={toggleReading}
+          className={cx(
+            "inline-flex items-center gap-2 rounded-chip px-4 py-2 text-sm font-medium",
+            reading ? "bg-ink text-paper" : "bg-sky-soft text-sky-deep",
+          )}
+        >
+          {reading ? <Stop size={16} weight="fill" /> : <SpeakerHigh size={16} />}
+          {reading ? t("stories.stopReading") : t("stories.readAloud")}
+        </button>
+      </div>
+
       <article className="space-y-5 text-[19px] leading-[1.9]">
         {story.paragraphs.map((p, pi) => (
           <p key={`p${pi}`}>
@@ -491,11 +529,4 @@ function Reader() {
       )}
     </Page>
   );
-}
-
-function sentenceText(s: StorySentence) {
-  return s.tokens
-    .map((tk) => tk.text + tk.ws)
-    .join("")
-    .trim();
 }

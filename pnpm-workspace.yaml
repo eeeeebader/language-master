@@ -31,3 +31,4 @@ minimumReleaseAgeExclude:
   - '@sentry/server-utils@11.11.0'
 allowBuilds:
   esbuild: true
+  core-js: false

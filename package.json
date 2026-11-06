@@ -25,10 +25,5 @@
   "engines": {
     "node": ">=22.5",
     "pnpm": ">=10"
-  },
-  "pnpm": {
-    "ignoredBuiltDependencies": [
-      "core-js"
-    ]
   }
 }

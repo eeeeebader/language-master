@@ -108,7 +108,13 @@ async function createStarterList() {
           o.kind === "gender_pair" ||
           (o.kind === "article" && e.pos === "noun"),
       )
-      .filter((o) => !(o.kind === "lemma" && opts.some((x) => x.kind === "article")));
+      // One card per word: the article or gender-pair form replaces the bare lemma.
+      .filter(
+        (o) =>
+          !(
+            o.kind === "lemma" && opts.some((x) => x.kind === "article" || x.kind === "gender_pair")
+          ),
+      );
     await addDictionaryWord(
       e,
       chosen.map(({ kind, front, back }) => ({ kind, front, back })),

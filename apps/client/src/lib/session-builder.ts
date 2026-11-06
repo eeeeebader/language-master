@@ -1,5 +1,5 @@
 import type { CardState, CardVariant, ReviewEvent, UserWord } from "@lm/schema";
-import { isDue, type SessionCard, shuffle } from "@lm/srs";
+import { isDue, normaliseAnswer, type SessionCard, shuffle } from "@lm/srs";
 import { db } from "@/db/db";
 import { rateWord } from "@/lib/rating";
 
@@ -61,6 +61,17 @@ export async function buildSession(opts: BuildOptions): Promise<SessionCard[]> {
       .map((s) => [s.variantId, s]),
   );
 
+  // One card per word and translation: "encantado" and "encantado / encantada" both mean
+  // "erfreut", so only the richer form is asked (the others stay on the word page).
+  const PREFER: Record<string, number> = { gender_pair: 0, article: 1, plural: 2, lemma: 3 };
+  const chosen = new Map<string, CardVariant>();
+  for (const v of variants) {
+    const key = `${v.wordId}\n${normaliseAnswer(v.back)}`;
+    const cur = chosen.get(key);
+    if (!cur || (PREFER[v.kind] ?? 9) < (PREFER[cur.kind] ?? 9)) chosen.set(key, v);
+  }
+  const askable = new Set([...chosen.values()].map((v) => v.id));
+
   const focus = new Set(opts.focus ?? []);
   let failedVariantIds: Set<string> | null = null;
   if (opts.filter === "failed" || focus.has("failed")) {
@@ -82,6 +93,7 @@ export async function buildSession(opts: BuildOptions): Promise<SessionCard[]> {
     if (!w) continue;
     const st = states.get(v.id);
     if (!v.front.trim() || !v.back.trim()) continue; // nothing to ask yet (missing translation)
+    if (!askable.has(v.id)) continue;
     if (opts.filter === "due" && !isDue(st, now)) continue;
     if (opts.filter === "new" && st) continue;
     if (opts.filter === "failed" && failedVariantIds && !failedVariantIds.has(v.id)) continue;

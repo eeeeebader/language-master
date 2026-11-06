@@ -7,7 +7,7 @@ test("fresh install goes through onboarding into the guided starter session", as
   // classic mode: flip, grade, next card
   await page.getByRole("button", { name: "Antwort zeigen" }).click();
   await page.getByText("Gut", { exact: true }).click();
-  await expect(page.getByText(/16 übrig/)).toBeVisible();
+  await expect(page.getByText(/14 übrig/)).toBeVisible();
   // leaving the onboarding session leads to the tour, then home
   await page.getByRole("button", { name: "Beenden" }).click();
   await expect(page).toHaveURL(/\/tour/);

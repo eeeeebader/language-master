@@ -21,7 +21,7 @@ import { getEntryByLemma, searchDictionary } from "@/lib/dictionary";
 import { t } from "@/lib/i18n";
 import { play } from "@/lib/sound";
 import { track } from "@/lib/telemetry";
-import { speak, speakStory, stopSpeaking } from "@/lib/tts";
+import { speak, speakAuto, speakStory, stopSpeaking } from "@/lib/tts";
 
 export const Route = createFileRoute("/stories/$storyId")({ component: Reader });
 
@@ -103,7 +103,7 @@ function Reader() {
       (sp) => index >= sp.from && index < sp.to,
     );
     setSel({ sentence, index, token, spans });
-    speak(token.text);
+    speakAuto(token.text);
     play("tap");
     if (progress && !progress.tappedLemmas.includes(token.lemma))
       db.storyProgress.update(storyId, {

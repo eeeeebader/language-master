@@ -1,5 +1,4 @@
 import type { Lecture } from "@lm/schema";
-import { numberToSpanish } from "../lib/spanish";
 
 const de = (s: string) => ({ de: s });
 const w = (text: string, translation: string, note?: string) =>
@@ -8,8 +7,6 @@ const w = (text: string, translation: string, note?: string) =>
     : { text, translation: de(translation) };
 const ph = (text: string, translation: string) => ({ text, translation: de(translation) });
 const v = (lemma: string, translation: string) => ({ lemma, translation: de(translation) });
-const nums = (from: number, to: number) =>
-  Array.from({ length: to - from + 1 }, (_, i) => ph(numberToSpanish(from + i), String(from + i)));
 
 /** Every word or phrase a lecture offers for the learner's list (used to hide repeats later). */
 export function lectureVocab(l: Lecture): string[] {
@@ -927,32 +924,26 @@ export const LECTURES_ES: Lecture[] = [
       {
         id: "m5",
         type: "vocab_bundle",
-        title: de("Zahlen bis 121 und das Alter"),
+        title: de("Zahlen und das Alter"),
         lemmas: [
           v("veintiuno", "einundzwanzig"),
           v("veintidós", "zweiundzwanzig"),
           v("veintitrés", "dreiundzwanzig"),
-          v("veinticuatro", "vierundzwanzig"),
-          v("veinticinco", "fünfundzwanzig"),
-          v("veintiséis", "sechsundzwanzig"),
-          v("veintisiete", "siebenundzwanzig"),
-          v("veintiocho", "achtundzwanzig"),
-          v("veintinueve", "neunundzwanzig"),
-          v("treinta", "dreißig"),
           v("cuarenta", "vierzig"),
           v("cincuenta", "fünfzig"),
           v("sesenta", "sechzig"),
           v("setenta", "siebzig"),
           v("ochenta", "achtzig"),
           v("noventa", "neunzig"),
-          v("ciento", "hundert (vor weiteren Zahlen)"),
           v("tener", "haben"),
           v("año", "das Jahr"),
         ],
         phrases: [
-          ...nums(31, 39),
-          ...nums(41, 49),
-          ...nums(101, 121),
+          ph("treinta y uno", "31"),
+          ph("treinta y dos", "32"),
+          ph("treinta y tres", "33"),
+          ph("ciento diez", "110"),
+          ph("ciento veinte", "120"),
           ph("¿Cuántos años tienes?", "Wie alt bist du?"),
           ph("Tengo veintitrés años.", "Ich bin 23 Jahre alt."),
           ph("¿Y tú?", "Und du?"),

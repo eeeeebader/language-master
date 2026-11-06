@@ -90,6 +90,11 @@ const de = {
   "cards.wordPage": "Zum Wort",
   "cards.word": "Wort",
   "cards.inLists": "In deinen Listen",
+  "settings.autoSpeak": "Automatisch vorlesen",
+  "settings.autoSpeak.hint":
+    "Wörter werden beim Antippen vorgelesen – in Lektionen, Geschichten und im Wort-Drawer. Aus: nur das Lautsprecher-Symbol spricht.",
+  "home.autoSpeakOn": "Vorlesen an",
+  "home.autoSpeakOff": "Vorlesen aus",
   "list.search": "In der Liste suchen …",
   "cards.removeFromList": "Aus Liste entfernen",
   "session.dontKnow": "Weiß ich nicht",

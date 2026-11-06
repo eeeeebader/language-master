@@ -18,6 +18,20 @@ function loadVoices(): Promise<SpeechSynthesisVoice[]> {
   });
 }
 
+let autoSpeakOn = true;
+/** Settings: whether taps that are not a speaker button read the text aloud. */
+export function setAutoSpeak(on: boolean) {
+  autoSpeakOn = on;
+}
+export function autoSpeakEnabled(): boolean {
+  return autoSpeakOn;
+}
+/** Speak only when the learner wants things read automatically (word taps, calendar days …). */
+export function speakAuto(text: string, lang = "es-ES"): Promise<boolean> {
+  if (!autoSpeakOn) return Promise.resolve(false);
+  return speak(text, lang);
+}
+
 /** Pre-rendered clip when the audio pack has it; else the device's speech synthesis. */
 export async function speak(text: string, lang = "es-ES"): Promise<boolean> {
   if (await playClip(text)) return true;

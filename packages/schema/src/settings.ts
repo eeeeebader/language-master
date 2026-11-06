@@ -34,6 +34,8 @@ export const UserSettings = z.object({
   consentVersion: z.number().int().default(1),
   consentedAt: IsoDateTime,
   soundOn: z.boolean().default(true),
+  /** Read words aloud on any tap (off: only speaker buttons speak). */
+  autoSpeak: z.boolean().default(true),
   hapticsOn: z.boolean().default(true),
   dailyNewCards: z.number().int().min(1).max(100).default(10),
   learningDays: z.array(Weekday).default([1, 2, 3, 4, 5]),

@@ -49,6 +49,7 @@ export async function createSettings(
     consentVersion: 1,
     consentedAt: now,
     soundOn: true,
+    autoSpeak: true,
     hapticsOn: true,
     dailyNewCards: 10,
     learningDays: [1, 2, 3, 4, 5],

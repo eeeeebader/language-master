@@ -53,6 +53,12 @@ function Settings() {
           onChange={(v) => saveSettings({ soundOn: v })}
         />
         <Toggle
+          label={t("settings.autoSpeak")}
+          hint={t("settings.autoSpeak.hint")}
+          checked={s.autoSpeak ?? true}
+          onChange={(v) => saveSettings({ autoSpeak: v })}
+        />
+        <Toggle
           label={t("settings.haptics")}
           checked={s.hapticsOn}
           onChange={(v) => saveSettings({ hapticsOn: v })}

@@ -16,6 +16,7 @@ import { setMuted } from "@/lib/sound";
 import { refreshOfficialStories } from "@/lib/stories";
 import { startSyncScheduler } from "@/lib/sync";
 import { identify, track } from "@/lib/telemetry";
+import { setAutoSpeak } from "@/lib/tts";
 
 export const Route = createRootRoute({ component: Root });
 
@@ -79,6 +80,7 @@ function Root() {
     if (!settings) return;
     setMuted(!settings.soundOn);
     setHaptics(settings.hapticsOn);
+    setAutoSpeak(settings.autoSpeak ?? true);
   }, [settings]);
 
   // Reminders are recomputed from local data on every app open and foreground.

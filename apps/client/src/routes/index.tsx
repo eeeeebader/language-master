@@ -1,12 +1,22 @@
-import { ArrowRight, BookOpenText, Cards, Fire, Path, Tray, User } from "@phosphor-icons/react";
+import {
+  ArrowRight,
+  BookOpenText,
+  Cards,
+  Fire,
+  Path,
+  SpeakerHigh,
+  SpeakerSlash,
+  Tray,
+  User,
+} from "@phosphor-icons/react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useLiveQuery } from "dexie-react-hooks";
 import { useEffect } from "react";
 import { VelocityChart } from "@/components/Charts";
-import { Button, Card, Page, Stat } from "@/components/ui";
+import { Button, Card, cx, Page, Stat } from "@/components/ui";
 import { LECTURES_ES } from "@/data/lectures-es";
 import { db } from "@/db/db";
-import { addStreakLog } from "@/db/repo";
+import { addStreakLog, saveSettings } from "@/db/repo";
 import { useSettings } from "@/hooks/useSettings";
 import {
   useDailyAverageMinutes,
@@ -59,6 +69,22 @@ function Home() {
       title={t("home.greeting", { name: settings?.username ?? "" })}
       action={
         <>
+          <button
+            type="button"
+            onClick={() => saveSettings({ autoSpeak: !(settings?.autoSpeak ?? true) })}
+            className={cx(
+              "flex h-10 w-10 items-center justify-center rounded-full",
+              (settings?.autoSpeak ?? true)
+                ? "bg-paper-2 text-ink-2"
+                : "bg-rose-soft text-rose-deep",
+            )}
+            aria-label={
+              (settings?.autoSpeak ?? true) ? t("home.autoSpeakOn") : t("home.autoSpeakOff")
+            }
+            title={(settings?.autoSpeak ?? true) ? t("home.autoSpeakOn") : t("home.autoSpeakOff")}
+          >
+            {(settings?.autoSpeak ?? true) ? <SpeakerHigh size={20} /> : <SpeakerSlash size={20} />}
+          </button>
           <Link
             to="/inbox"
             className="relative flex h-10 w-10 items-center justify-center rounded-full bg-paper-2 text-ink-2"

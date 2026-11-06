@@ -12,7 +12,7 @@ import {
   numberToSpanish,
   timeToSpanish,
 } from "@/lib/spanish";
-import { speak } from "@/lib/tts";
+import { speak, speakAuto } from "@/lib/tts";
 import { Button, Card, Chip, cx, Markdownish } from "./ui";
 import type { VocabItem } from "./VocabSheet";
 
@@ -70,7 +70,7 @@ function Word({
       )}
       onClick={(e) => {
         e.stopPropagation();
-        speak(text);
+        speakAuto(text);
         onWord?.({ text, translation });
       }}
     >
@@ -125,7 +125,7 @@ export function Block({
                 key={r.value}
                 className="flex items-center justify-between rounded-chip px-3 py-1.5 text-left hover:bg-paper-2"
                 onClick={() => {
-                  speak(r.word);
+                  speakAuto(r.word);
                   onWord?.({ text: r.word, translation: String(r.value) });
                 }}
               >
@@ -154,7 +154,7 @@ export function Block({
                 key={x.text}
                 className="rounded-chip px-3 py-1.5 text-left hover:bg-paper-2"
                 onClick={() => {
-                  speak(x.text);
+                  speakAuto(x.text);
                   onWord?.({ text: x.text, translation: x.translation.de });
                 }}
               >
@@ -263,7 +263,7 @@ export function Block({
                   type="button"
                   className="w-full px-3 py-2 text-left font-medium hover:bg-sky-soft"
                   onClick={() => {
-                    speak(text);
+                    speakAuto(text);
                     onWord?.({ text, translation: tr ?? other });
                   }}
                 >
@@ -335,7 +335,7 @@ export function Block({
                 key={i.text}
                 className="rounded-chip bg-paper-2 px-2.5 py-1 text-left text-sm hover:bg-sky-soft"
                 onClick={() => {
-                  speak(i.text);
+                  speakAuto(i.text);
                   onWord?.(i);
                 }}
               >
@@ -348,7 +348,7 @@ export function Block({
       );
     }
     case "calculator":
-      return <Calculator intro={block.intro?.de} />;
+      return <Calculator intro={block.intro?.de} onWord={onWord} />;
     case "clock":
       return <Clock intro={block.intro?.de} />;
     case "calendar":
@@ -421,7 +421,7 @@ function AlphabetGrid({
             key={l.glyph}
             onClick={() => {
               setOpen(l.glyph);
-              speak(l.example.split(" · ")[0] ?? l.example);
+              speakAuto(l.example.split(" · ")[0] ?? l.example);
             }}
             className={cx(
               "aspect-square rounded-card border text-xl font-bold transition-all",
@@ -610,7 +610,12 @@ const OPS = [
   },
 ] as const;
 
-function Calculator({ intro }: { intro?: string }) {
+function Calculator({ intro, onWord }: { intro?: string; onWord?: OnWord }) {
+  const openNumber = (n: number) => {
+    const es = numberToSpanish(n);
+    speakAuto(es);
+    onWord?.({ text: es, translation: String(n) });
+  };
   const [a, setA] = useState(12);
   const [b, setB] = useState(7);
   const [op, setOp] = useState(0);
@@ -645,9 +650,14 @@ function Calculator({ intro }: { intro?: string }) {
         </div>
         {field(b, setB)}
         <span className="text-lg text-ink-3">=</span>
-        <span className="min-w-12 text-center text-lg font-bold tabular-nums">
+        <button
+          type="button"
+          className="min-w-12 rounded-chip bg-sage-soft px-3 py-1 text-center text-lg font-bold tabular-nums text-sage-deep"
+          onClick={() => Number.isFinite(result) && openNumber(result)}
+          aria-label="Ergebnis als Vokabel"
+        >
           {Number.isFinite(result) ? result : "–"}
-        </span>
+        </button>
       </div>
       <div className="mt-2 flex flex-wrap justify-center gap-1 text-xs text-ink-3">
         {OPS.map((x) => (
@@ -662,14 +672,14 @@ function Calculator({ intro }: { intro?: string }) {
         <button
           type="button"
           className="rounded-chip px-2 py-1 text-left hover:bg-paper-2"
-          onClick={() => speak(numberToSpanish(a))}
+          onClick={() => openNumber(a)}
         >
           {a} · <b>{numberToSpanish(a)}</b>
         </button>
         <button
           type="button"
           className="rounded-chip px-2 py-1 text-left hover:bg-paper-2"
-          onClick={() => speak(numberToSpanish(b))}
+          onClick={() => openNumber(b)}
         >
           {b} · <b>{numberToSpanish(b)}</b>
         </button>
@@ -825,7 +835,11 @@ function Calendar({ intro }: { intro?: string }) {
         >
           ‹
         </button>
-        <button type="button" className="font-bold" onClick={() => speak(MONTHS_ES[month] ?? "")}>
+        <button
+          type="button"
+          className="font-bold"
+          onClick={() => speakAuto(MONTHS_ES[month] ?? "")}
+        >
           {MONTHS_ES[month]}{" "}
           <span className="font-normal text-ink-2">
             · {MONTHS_DE[month]} {year}
@@ -846,7 +860,7 @@ function Calendar({ intro }: { intro?: string }) {
             type="button"
             key={d}
             className={cx("rounded-chip py-1 hover:bg-paper-2", i >= 5 && "text-rose-deep")}
-            onClick={() => speak(d)}
+            onClick={() => speakAuto(d)}
             title={DAYS_DE[i]}
           >
             {d.slice(0, 2)}
@@ -866,7 +880,7 @@ function Calendar({ intro }: { intro?: string }) {
               key={`d-${n.toString()}`}
               onClick={() => {
                 setDay(n);
-                speak(dateToSpanish(new Date(year, month, n)).es);
+                speakAuto(dateToSpanish(new Date(year, month, n)).es);
               }}
               className={cx(
                 "aspect-square rounded-chip text-sm tabular-nums",

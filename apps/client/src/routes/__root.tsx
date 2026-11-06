@@ -1,6 +1,7 @@
 import { createRootRoute, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { Nav } from "@/components/Nav";
+import { TtsHint } from "@/components/TtsHint";
 import { OFFICIAL_STORIES } from "@/data/stories-es";
 import { db } from "@/db/db";
 import { learningEventHooks } from "@/db/repo";
@@ -110,6 +111,7 @@ function Root() {
     <>
       <Outlet />
       {settings && !hideNav && <Nav />}
+      <TtsHint />
     </>
   );
 }

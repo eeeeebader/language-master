@@ -60,6 +60,7 @@ export const Route = createFileRoute("/karteikarten/session")({
 
 interface Pool {
   id: string;
+  wordId: string;
   pos: SessionCard["pos"];
   back: string;
   front: string;
@@ -146,6 +147,7 @@ function Session() {
       setPool(
         allVariants.map((v) => ({
           id: v.id,
+          wordId: v.wordId,
           pos: words.get(v.wordId)?.pos ?? "other",
           back: v.back,
           front: v.front,
@@ -185,14 +187,19 @@ function Session() {
       if (useChoice) {
         // Distractors must answer in the same direction as the shown card.
         const dir = cardDir;
-        const oriented = pool.map((p) => ({
-          id: p.id,
-          pos: p.pos,
-          back: dir === "t2n" ? p.back : p.front,
-          front: dir === "t2n" ? p.front : p.back,
-        }));
+        // Sibling variants of the same word (nuevo / nueva) would be a second right answer.
+        const oriented = pool
+          .filter((p) => p.wordId !== current.wordId)
+          .map((p) => ({
+            id: p.id,
+            wordId: p.wordId,
+            pos: p.pos,
+            back: dir === "t2n" ? p.back : p.front,
+            front: dir === "t2n" ? p.front : p.back,
+          }));
         const target: Pool = {
           id: current.variantId,
+          wordId: current.wordId,
           pos: current.pos,
           back: current.back,
           front: current.front,
@@ -352,7 +359,17 @@ function Session() {
   async function checkTyped() {
     if (!current) return;
     const ms = Math.round(performance.now() - shownAt.current);
-    const correct = answersMatch(typed, current.back);
+    // Any sibling variant with the same prompt counts (neu → nuevo or nuevo / nueva).
+    const dir = cardDir;
+    const accepted = [
+      current.back,
+      ...pool
+        .filter((p) => p.wordId === current.wordId)
+        .map((p) => ({ f: dir === "t2n" ? p.front : p.back, b: dir === "t2n" ? p.back : p.front }))
+        .filter((p) => answersMatch(p.f, current.front))
+        .map((p) => p.b),
+    ];
+    const correct = accepted.some((a) => answersMatch(typed, a));
     const profile = await db.profiles.get([current.variantId, promptKind]);
     const grade = inferGrade({
       reactionMs: ms,

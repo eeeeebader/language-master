@@ -96,6 +96,12 @@ function mockWrite(path: string, body: any): unknown {
       const before = { ...u };
       if (action === "grant-tokens") u.story_tokens += Number(body.delta);
       if (action === "set-premium") u.is_premium = !!body.is_premium;
+      if (action === "entitlements") {
+        if (body.is_premium !== undefined) u.is_premium = !!body.is_premium;
+        if (body.is_supporter !== undefined) u.is_supporter = !!body.is_supporter;
+        if (body.free_stories_per_day !== undefined)
+          u.free_stories_per_day = body.free_stories_per_day;
+      }
       if (action === "delete") mock.users.splice(mock.users.indexOf(u), 1);
       audit("users", u.id, before, action === "delete" ? null : { ...u });
       return u;
@@ -282,8 +288,18 @@ function mockWrite(path: string, body: any): unknown {
         const before = { ...l };
         l.enabled = !!body.enabled;
         audit("languages", `${l.target}-${l.native}`, before, { ...l });
+        return l;
       }
-      return l;
+      const created = {
+        target: body.target,
+        native: body.native,
+        enabled: !!body.enabled,
+        pack_version: null,
+        published_lectures: 0,
+      };
+      mock.languages.push(created);
+      audit("languages", `${created.target}-${created.native}`, null, created);
+      return created;
     }
     case "flags": {
       const f = mock.feature_flags.find((x) => x.key === body.key);

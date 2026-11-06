@@ -113,7 +113,10 @@ export function LectureBlockView({
       return (
         <PatternBuilder
           intro={block.intro ? i18n(block.intro) : undefined}
-          slots={block.slots.map((s) => ({ label: i18n(s.label), options: s.options }))}
+          slots={block.slots.map((s) => ({
+            label: i18n(s.label),
+            options: s.options.map((o) => (typeof o === "string" ? o : o.text)),
+          }))}
           onPlay={onPlay}
         />
       );
@@ -213,7 +216,15 @@ export function LectureBlockView({
           labels={l}
         />
       );
-    case "vocab_bundle":
+    case "vocab_bundle": {
+      const items = [
+        ...block.lemmas.map((x) =>
+          typeof x === "string"
+            ? { text: x, gloss: glossFor?.(x) }
+            : { text: x.lemma, gloss: i18n(x.translation) },
+        ),
+        ...block.phrases.map((p) => ({ text: p.text, gloss: i18n(p.translation) })),
+      ];
       return (
         <div className={card}>
           <div className="mb-2 flex items-center justify-between">
@@ -222,22 +233,60 @@ export function LectureBlockView({
               <button
                 type="button"
                 className="rounded-chip bg-paper-2 px-3 py-1.5 text-sm font-semibold"
-                onClick={() => onVocabBundle(block.lemmas)}
+                onClick={() => onVocabBundle(items.map((x) => x.text))}
               >
                 + {l.addAll}
               </button>
             )}
           </div>
           <div className="flex flex-wrap gap-1.5">
-            {block.lemmas.map((lemma) => {
-              const g = glossFor?.(lemma);
-              return (
-                <span key={lemma} className="rounded-chip bg-paper-2 px-2.5 py-1 text-sm">
-                  <b>{lemma}</b>
-                  {g && <span className="text-ink-2"> · {g}</span>}
-                </span>
-              );
-            })}
+            {items.map((x) => (
+              <span key={x.text} className="rounded-chip bg-paper-2 px-2.5 py-1 text-sm">
+                <b>{x.text}</b>
+                {x.gloss && <span className="text-ink-2"> · {x.gloss}</span>}
+              </span>
+            ))}
+          </div>
+        </div>
+      );
+    }
+    case "word_list":
+      return (
+        <div className={card}>
+          {block.title && <div className="mb-2 font-bold">{i18n(block.title)}</div>}
+          <div className="grid gap-1">
+            {block.words.map((w) => (
+              <button
+                type="button"
+                key={w.text}
+                className="rounded-chip px-3 py-1.5 text-left hover:bg-paper-2"
+                onClick={() => onPlay?.(w.text)}
+              >
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="font-semibold">{w.text}</span>
+                  <span className="text-sm text-ink-2">{i18n(w.translation)}</span>
+                </div>
+                {w.note && <div className="text-xs text-ink-3">{i18n(w.note)}</div>}
+              </button>
+            ))}
+          </div>
+        </div>
+      );
+    case "calculator":
+    case "clock":
+    case "calendar":
+      return (
+        <div className={`${card} text-sm text-ink-2`}>
+          <div className="font-bold text-ink">
+            {block.type === "calculator"
+              ? "Rechner"
+              : block.type === "clock"
+                ? "Interaktive Uhr"
+                : "Interaktiver Kalender"}
+          </div>
+          {block.intro && <div className="mt-1">{i18n(block.intro)}</div>}
+          <div className="mt-1 text-xs text-ink-3">
+            Interaktives Element – in der App bedienbar.
           </div>
         </div>
       );

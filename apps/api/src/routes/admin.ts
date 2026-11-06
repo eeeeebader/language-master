@@ -115,6 +115,41 @@ export function adminRoutes({ db, settings, annotateOfficial }: AdminDeps) {
     return c.json(result);
   });
 
+  /** One call for everything an admin grants by hand: tier, supporter badge, free stories. */
+  app.post("/users/:id/entitlements", ADMIN, async (c) => {
+    const id = c.req.param("id");
+    const patch = await body(
+      c,
+      z.object({
+        is_premium: z.boolean().optional(),
+        is_supporter: z.boolean().optional(),
+        free_stories_per_day: z.number().int().min(0).max(100).nullable().optional(),
+      }),
+    );
+    const result = await db.transaction(async (tx) => {
+      const before = (await tx.select().from(entitlements).where(eq(entitlements.userId, id)))[0];
+      if (!before) return null;
+      const set: Partial<typeof before> = { updatedAt: new Date() };
+      if (patch.is_premium !== undefined) {
+        set.isPremium = patch.is_premium;
+        set.source = "admin_grant";
+      }
+      if (patch.is_supporter !== undefined) {
+        set.isSupporter = patch.is_supporter;
+        set.supporterSince = patch.is_supporter ? (before.supporterSince ?? new Date()) : null;
+      }
+      if (patch.free_stories_per_day !== undefined)
+        set.freeStoriesPerDay = patch.free_stories_per_day;
+      const after = (
+        await tx.update(entitlements).set(set).where(eq(entitlements.userId, id)).returning()
+      )[0];
+      await writeAudit(tx, actor(c), "entitlements", id, before, after);
+      return after;
+    });
+    if (!result) return c.json({ error: "user not found" }, 404);
+    return c.json(result);
+  });
+
   app.get("/users/:id/export", ADMIN, async (c) => {
     const id = c.req.param("id");
     const data = await exportAccount(db, id);

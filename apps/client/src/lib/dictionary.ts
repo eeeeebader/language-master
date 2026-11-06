@@ -6,12 +6,28 @@ import { dictClient, packSearchReady, searchPack } from "./dict-pack";
 const byId = new Map(DICTIONARY_ES.map((e) => [e.id, e]));
 const byLemma = new Map(DICTIONARY_ES.map((e) => [normaliseAnswer(e.lemma), e]));
 
+/** Curated seed glosses go first; the pack's Wiktionary glosses follow (deduplicated). */
+function withSeedGlosses(e: DictionaryEntry | undefined): DictionaryEntry | undefined {
+  if (!e) return e;
+  const seed = byLemma.get(normaliseAnswer(e.lemma));
+  if (!seed || seed === e) return e;
+  const seen = new Set(seed.glosses.map((g) => g.text.toLowerCase()));
+  return {
+    ...e,
+    glosses: [...seed.glosses, ...e.glosses.filter((g) => !seen.has(g.text.toLowerCase()))].slice(
+      0,
+      4,
+    ),
+    examples: e.examples.length ? e.examples : seed.examples,
+  };
+}
+
 export function getEntry(id: string): DictionaryEntry | undefined {
-  return dictClient()?.getEntry(id) ?? byId.get(id);
+  return withSeedGlosses(dictClient()?.getEntry(id)) ?? byId.get(id);
 }
 
 export function getEntryByLemma(lemma: string): DictionaryEntry | undefined {
-  return dictClient()?.getByLemma(lemma) ?? byLemma.get(normaliseAnswer(lemma));
+  return withSeedGlosses(dictClient()?.getByLemma(lemma)) ?? byLemma.get(normaliseAnswer(lemma));
 }
 
 /** Where entries come from right now: the downloaded pack or the bundled seed. */

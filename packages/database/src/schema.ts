@@ -237,6 +237,8 @@ export const entitlements = pgTable("entitlements", {
   storyTokens: integer("story_tokens").notNull().default(0),
   isSupporter: boolean("is_supporter").notNull().default(false),
   supporterSince: timestamp("supporter_since", { withTimezone: true }),
+  /** Admin override of stories.free_per_day for this user; null = app setting. */
+  freeStoriesPerDay: integer("free_stories_per_day"),
   source: text("source"),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

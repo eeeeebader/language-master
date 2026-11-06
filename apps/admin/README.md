@@ -46,6 +46,7 @@ All endpoints require `Authorization: Bearer <supabase access token>` with role 
 | GET | `/admin/audit?limit=200` | – | admin |
 | POST | `/admin/users/:id/grant-tokens` | `{ delta: number, reason: string }` → token_ledger + entitlements | admin |
 | POST | `/admin/users/:id/set-premium` | `{ is_premium: boolean }` | admin |
+| POST | `/admin/users/:id/entitlements` | `{ is_premium?, is_supporter?, free_stories_per_day?: number \| null }` → entitlements (audited) | admin |
 | GET | `/admin/users/:id/export` | – → full user data (Art. 15) | admin |
 | POST | `/admin/users/:id/delete` | `{ reason }` → auth user delete, `deleted_accounts` row (Art. 17) | admin |
 | POST | `/admin/settings` | `{ key, value_json }` → new version of app_settings | admin |

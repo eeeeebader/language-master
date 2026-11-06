@@ -58,7 +58,7 @@ export async function reserveGeneration(
         ),
       );
     const decision = decideQuota({
-      freePerDay,
+      freePerDay: ent?.freeStoriesPerDay ?? freePerDay,
       usedToday: usedRows[0]?.n ?? 0,
       tokens: ent?.storyTokens ?? 0,
     });

@@ -211,11 +211,14 @@ export async function addDictionaryWord(
   },
   variants: { kind: VariantKind; front: string; back: string }[],
   listId: string,
+  translationOverride?: string,
 ) {
-  const translation = entry.glosses
-    .map((g) => g.text)
-    .slice(0, 2)
-    .join(", ");
+  const translation =
+    translationOverride ??
+    entry.glosses
+      .map((g) => g.text)
+      .slice(0, 2)
+      .join(", ");
   const word = await ensureWord({
     language: entry.language,
     lemma: entry.lemma,

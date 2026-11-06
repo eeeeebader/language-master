@@ -10,10 +10,11 @@ test("a lecture can be opened from the path and finished with its quick check", 
   await expect(page).toHaveURL(/lectures\/alphabet/);
   await expect(page.getByText("Kurzer Check")).toBeVisible();
   // answer the three questions (any option), then confirm
-  await page.getByRole("button", { name: "stumm" }).click();
-  await page.getByRole("button", { name: "perro", exact: true }).click();
-  await page.getByRole("button", { name: "wie j in „ja“" }).click();
-  await page.getByRole("button", { name: /richtig · Verstanden/ }).click();
+  const check = page.getByTestId("quick-check");
+  await check.getByRole("button", { name: "stumm" }).click();
+  await check.getByRole("button", { name: "perro", exact: true }).click();
+  await check.getByRole("button", { name: "wie „tsch“" }).click();
+  await page.getByRole("button", { name: "Verstanden" }).click();
   await expect(page).toHaveURL(/\/lectures$/);
   // the node is marked done on the home dashboard's next-lecture card
   await page.getByRole("link", { name: "Start" }).click();

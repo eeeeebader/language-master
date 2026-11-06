@@ -3,8 +3,18 @@ import { Plus, SpeakerHigh } from "@phosphor-icons/react";
 import { useState } from "react";
 import { getEntryByLemma } from "@/lib/dictionary";
 import { t } from "@/lib/i18n";
+import {
+  DAYS_DE,
+  DAYS_ES,
+  dateToSpanish,
+  MONTHS_DE,
+  MONTHS_ES,
+  numberToSpanish,
+  timeToSpanish,
+} from "@/lib/spanish";
 import { speak } from "@/lib/tts";
 import { Button, Card, Chip, cx, Markdownish } from "./ui";
+import type { VocabItem } from "./VocabSheet";
 
 const COLOUR_BG = {
   sage: "bg-sage-soft",
@@ -20,6 +30,8 @@ const COLOUR_TX = {
   amber: "text-amber-deep",
   sky: "text-sky-deep",
 } as const;
+
+type OnWord = (item: VocabItem) => void;
 
 export function AudioButton({ text, size = 16 }: { text: string; size?: number }) {
   return (
@@ -37,14 +49,56 @@ export function AudioButton({ text, size = 16 }: { text: string; size?: number }
   );
 }
 
+/** A tappable Spanish word: speaks it and opens the word drawer. */
+function Word({
+  text,
+  translation,
+  onWord,
+  className,
+}: {
+  text: string;
+  translation?: string;
+  onWord?: OnWord;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      className={cx(
+        "rounded-chip px-2 py-0.5 text-left font-semibold underline decoration-dotted decoration-sky underline-offset-4 hover:bg-sky-soft",
+        className,
+      )}
+      onClick={(e) => {
+        e.stopPropagation();
+        speak(text);
+        onWord?.({ text, translation });
+      }}
+    >
+      {text}
+    </button>
+  );
+}
+
+/** "gato · gente" with "Katze · Leute" → paired words. */
+function splitPairs(text: string, translation?: string): { text: string; translation?: string }[] {
+  const ws = text.split(" · ");
+  const ts = (translation ?? "").split(" · ");
+  return ws.map((w, i) => ({ text: w.trim(), translation: ts[i]?.trim() || translation }));
+}
+
 export function Block({
   block,
   onQuickCheck,
   onVocabBundle,
+  onWord,
+  hiddenLemmas,
 }: {
   block: LectureBlock;
   onQuickCheck?: (passed: boolean) => void;
-  onVocabBundle?: (lemmas: string[]) => void;
+  onVocabBundle?: (items: VocabItem[]) => void;
+  onWord?: OnWord;
+  /** Words already offered by earlier lectures; left out of this bundle. */
+  hiddenLemmas?: Set<string>;
 }) {
   switch (block.type) {
     case "heading": {
@@ -54,7 +108,7 @@ export function Block({
     case "prose":
       return <Markdownish text={block.markdown.de ?? ""} />;
     case "alphabet_grid":
-      return <AlphabetGrid letters={block.letters} />;
+      return <AlphabetGrid letters={block.letters} onWord={onWord} />;
     case "number_table":
       return (
         <Card>
@@ -64,7 +118,10 @@ export function Block({
                 type="button"
                 key={r.value}
                 className="flex items-center justify-between rounded-chip px-3 py-1.5 text-left hover:bg-paper-2"
-                onClick={() => speak(r.word)}
+                onClick={() => {
+                  speak(r.word);
+                  onWord?.({ text: r.word, translation: String(r.value) });
+                }}
               >
                 <span className="tabular-nums text-ink-3">{r.value}</span>
                 <span className="font-semibold">{r.word}</span>
@@ -72,6 +129,31 @@ export function Block({
             ))}
           </div>
           {block.patternNote && <p className="mt-3 text-sm text-ink-2">{block.patternNote.de}</p>}
+        </Card>
+      );
+    case "word_list":
+      return (
+        <Card>
+          {block.title && <div className="mb-2 font-bold">{block.title.de}</div>}
+          <div className="grid gap-1 sm:grid-cols-2">
+            {block.words.map((w) => (
+              <button
+                type="button"
+                key={w.text}
+                className="flex items-baseline justify-between gap-3 rounded-chip px-3 py-1.5 text-left hover:bg-paper-2"
+                onClick={() => {
+                  speak(w.text);
+                  onWord?.({ text: w.text, translation: w.translation.de });
+                }}
+              >
+                <span>
+                  <span className="font-semibold">{w.text}</span>
+                  {w.note && <span className="ml-1 text-xs text-ink-3">{w.note.de}</span>}
+                </span>
+                <span className="text-sm text-ink-2">{w.translation.de}</span>
+              </button>
+            ))}
+          </div>
         </Card>
       );
     case "rule_card":
@@ -84,10 +166,12 @@ export function Block({
           {block.examples.length > 0 && (
             <div className="mt-2 space-y-1">
               {block.examples.map((ex) => (
-                <div key={ex.text} className="rounded-card bg-white/70 px-3 py-1.5">
-                  <span className="font-semibold">{ex.text}</span> <AudioButton text={ex.text} />
-                  <div className="text-sm text-ink-2">{ex.translation.de}</div>
-                </div>
+                <Example
+                  key={ex.text}
+                  text={ex.text}
+                  translation={ex.translation.de}
+                  onWord={onWord}
+                />
               ))}
             </div>
           )}
@@ -110,7 +194,8 @@ export function Block({
       return (
         <Card>
           <div className="mb-2 font-bold">
-            {block.verb} <span className="font-normal text-ink-2">· {block.tense.de}</span>
+            <Word text={block.verb} onWord={onWord} className="-ml-2" />
+            <span className="font-normal text-ink-2"> · {block.tense.de}</span>
           </div>
           <div className="grid grid-cols-2 gap-x-4 gap-y-1">
             {block.persons.map((p) => (
@@ -158,12 +243,29 @@ export function Block({
             <div className="px-3 py-2">{block.left.de}</div>
             <div className="px-3 py-2">{block.right.de}</div>
           </div>
-          {block.rows.map(([l, r]) => (
-            <div key={`${l}-${r}`} className="grid grid-cols-2 border-t border-line text-sm">
-              <div className="px-3 py-2">{l}</div>
-              <div className="px-3 py-2">{r}</div>
-            </div>
-          ))}
+          {block.rows.map(([l, r, tr]) => {
+            const cell = (text: string, other: string, active: boolean) =>
+              active ? (
+                <button
+                  type="button"
+                  className="w-full px-3 py-2 text-left font-medium hover:bg-sky-soft"
+                  onClick={() => {
+                    speak(text);
+                    onWord?.({ text, translation: tr ?? other });
+                  }}
+                >
+                  {text}
+                </button>
+              ) : (
+                <div className="px-3 py-2">{text}</div>
+              );
+            return (
+              <div key={`${l}-${r}`} className="grid grid-cols-2 border-t border-line text-sm">
+                {cell(l, r, block.vocab === "left" || block.vocab === "both")}
+                {cell(r, l, block.vocab === "right" || block.vocab === "both")}
+              </div>
+            );
+          })}
         </Card>
       );
     case "constraint_visual":
@@ -184,48 +286,107 @@ export function Block({
               </span>
             ))}
           </div>
-          {block.links.length > 0 && (
-            <div className="mt-2 text-xs text-ink-3">
-              Verbunden:{" "}
-              {block.links
-                .map(([a, b]) => `${block.tokens[a]?.text} → ${block.tokens[b]?.text}`)
-                .join(" · ")}
+          {block.caption && (
+            <div className="mt-2 flex flex-wrap gap-1 text-sm text-ink-2">
+              {splitPairs(block.caption.de ?? "").map((w) => (
+                <Word key={w.text} text={w.text} onWord={onWord} className="font-medium" />
+              ))}
             </div>
           )}
-          {block.caption && <p className="mt-2 text-sm text-ink-2">{block.caption.de}</p>}
         </Card>
       );
     case "quick_check":
       return <QuickCheck questions={block.questions} onDone={onQuickCheck} />;
-    case "vocab_bundle":
+    case "vocab_bundle": {
+      const items: VocabItem[] = [
+        ...block.lemmas.map((l) =>
+          typeof l === "string"
+            ? { text: l, translation: getEntryByLemma(l)?.glosses[0]?.text }
+            : { text: l.lemma, translation: l.translation.de },
+        ),
+        ...block.phrases.map((p) => ({ text: p.text, translation: p.translation.de })),
+      ].filter((i) => !hiddenLemmas?.has(i.text.toLowerCase()));
+      if (items.length === 0) return null;
       return (
         <Card>
-          <div className="mb-2 flex items-center justify-between">
+          <div className="mb-2 flex items-center justify-between gap-2">
             <div className="font-bold">{block.title.de}</div>
-            <Button size="sm" variant="secondary" onClick={() => onVocabBundle?.(block.lemmas)}>
+            <Button size="sm" variant="secondary" onClick={() => onVocabBundle?.(items)}>
               <Plus size={14} /> {t("lectures.addAll")}
             </Button>
           </div>
           <div className="flex flex-wrap gap-1.5">
-            {block.lemmas.map((l) => {
-              const e = getEntryByLemma(l);
-              return (
-                <span key={l} className="rounded-chip bg-paper-2 px-2.5 py-1 text-sm">
-                  <b>{l}</b>
-                  {e && <span className="text-ink-2"> · {e.glosses[0]?.text}</span>}
-                </span>
-              );
-            })}
+            {items.map((i) => (
+              <button
+                type="button"
+                key={i.text}
+                className="rounded-chip bg-paper-2 px-2.5 py-1 text-left text-sm hover:bg-sky-soft"
+                onClick={() => {
+                  speak(i.text);
+                  onWord?.(i);
+                }}
+              >
+                <b>{i.text}</b>
+                {i.translation && <span className="text-ink-2"> · {i.translation}</span>}
+              </button>
+            ))}
           </div>
         </Card>
       );
+    }
+    case "calculator":
+      return <Calculator intro={block.intro?.de} />;
+    case "clock":
+      return <Clock intro={block.intro?.de} />;
+    case "calendar":
+      return <Calendar intro={block.intro?.de} />;
     default:
       return null;
   }
 }
 
+/** Rule-card example: single words become tappable, sentences get a speaker. */
+function Example({
+  text,
+  translation,
+  onWord,
+}: {
+  text: string;
+  translation?: string;
+  onWord?: OnWord;
+}) {
+  const parts: { text: string; translation?: string }[] = text.includes(" · ")
+    ? splitPairs(text, translation)
+    : text.split(/,\s+/).map((w) => ({ text: w }));
+  // " · " lists are always word lists; comma lists only when no part looks like a sentence.
+  const wordish = text.includes(" · ")
+    ? true
+    : parts.length > 1 &&
+      parts.every((p) => p.text.split(" ").length <= 3 && !/[.!?]$/.test(p.text));
+  if (wordish) {
+    const ts = (translation ?? "").split(/\s*(?:·|,)\s*/);
+    return (
+      <div className="rounded-card bg-white/70 px-2 py-1.5">
+        <div className="flex flex-wrap gap-1">
+          {parts.map((p, i) => (
+            <Word key={p.text} text={p.text} translation={p.translation ?? ts[i]} onWord={onWord} />
+          ))}
+        </div>
+        {translation && <div className="px-2 text-sm text-ink-2">{translation}</div>}
+      </div>
+    );
+  }
+  return (
+    <div className="rounded-card bg-white/70 px-3 py-1.5">
+      <span className="font-semibold">{text}</span> <AudioButton text={text} />
+      {translation && <div className="text-sm text-ink-2">{translation}</div>}
+    </div>
+  );
+}
+
 function AlphabetGrid({
   letters,
+  onWord,
 }: {
   letters: {
     glyph: string;
@@ -233,9 +394,11 @@ function AlphabetGrid({
     example: string;
     translation: Record<string, string | undefined>;
   }[];
+  onWord?: OnWord;
 }) {
   const [open, setOpen] = useState<string | null>(null);
   const sel = letters.find((l) => l.glyph === open);
+  const pairs = sel ? splitPairs(sel.example, sel.translation.de) : [];
   return (
     <div>
       <div className="grid grid-cols-6 gap-1.5">
@@ -245,7 +408,7 @@ function AlphabetGrid({
             key={l.glyph}
             onClick={() => {
               setOpen(l.glyph);
-              speak(l.example);
+              speak(l.example.split(" · ")[0] ?? l.example);
             }}
             className={cx(
               "aspect-square rounded-card border text-xl font-bold transition-all",
@@ -264,10 +427,19 @@ function AlphabetGrid({
             <span className="text-3xl font-extrabold">{sel.glyph}</span>
             <span className="font-mono text-ink-2">/{sel.ipa}/</span>
           </div>
-          <div className="mt-1 text-lg font-semibold">
-            {sel.example} <AudioButton text={sel.example} />
+          <div className="mt-1 flex flex-wrap gap-x-1 gap-y-1">
+            {pairs.map((p) => (
+              <span key={p.text} className="inline-flex items-center">
+                <Word
+                  text={p.text}
+                  translation={p.translation}
+                  onWord={onWord}
+                  className="text-lg"
+                />
+                <span className="text-sm text-ink-2">{p.translation}</span>
+              </span>
+            ))}
           </div>
-          <div className="text-sm text-ink-2">{sel.translation.de}</div>
         </Card>
       )}
     </div>
@@ -279,10 +451,26 @@ function PatternBuilder({
   slots,
 }: {
   intro?: string;
-  slots: { label: Record<string, string | undefined>; options: string[] }[];
+  slots: {
+    label: Record<string, string | undefined>;
+    options: (string | { text: string; translation: Record<string, string | undefined> })[];
+  }[];
 }) {
   const [picked, setPicked] = useState<number[]>(slots.map(() => 0));
-  const sentence = slots.map((s, i) => s.options[picked[i] ?? 0]).join(" ");
+  const text = (o: (typeof slots)[number]["options"][number]) =>
+    typeof o === "string" ? o : o.text;
+  const tr = (o: (typeof slots)[number]["options"][number]) =>
+    typeof o === "string" ? "" : (o.translation.de ?? "");
+  const chosen = slots.map((s, i) => s.options[picked[i] ?? 0]).filter((o) => o !== undefined);
+  const sentence = chosen
+    .map(text)
+    .join(" ")
+    .replace(/\s+([,.?!])/g, "$1");
+  const translation = chosen
+    .map(tr)
+    .filter(Boolean)
+    .join(" ")
+    .replace(/\s+([,.?!])/g, "$1");
   return (
     <Card>
       {intro && <div className="mb-2 text-sm text-ink-2">{intro}</div>}
@@ -293,11 +481,11 @@ function PatternBuilder({
             <div className="flex flex-wrap gap-1.5">
               {s.options.map((o, j) => (
                 <Chip
-                  key={o}
+                  key={text(o)}
                   active={picked[i] === j}
                   onClick={() => setPicked(picked.map((p, k) => (k === i ? j : p)))}
                 >
-                  {o}
+                  {text(o)}
                 </Chip>
               ))}
             </div>
@@ -307,9 +495,12 @@ function PatternBuilder({
       <button
         type="button"
         onClick={() => speak(sentence)}
-        className="mt-3 w-full rounded-card bg-sage-soft px-4 py-3 text-left text-lg font-semibold text-sage-deep"
+        className="mt-3 w-full rounded-card bg-sage-soft px-4 py-3 text-left text-sage-deep"
       >
-        {sentence} <SpeakerHigh size={18} className="ml-1 inline" />
+        <span className="text-lg font-semibold">
+          {sentence} <SpeakerHigh size={18} className="ml-1 inline" />
+        </span>
+        {translation && <div className="mt-0.5 text-sm text-sage-deep/80">{translation}</div>}
       </button>
     </Card>
   );
@@ -326,7 +517,7 @@ function QuickCheck({
   const complete = answers.every((a) => a !== null);
   const correct = answers.filter((a, i) => a === questions[i]?.answer).length;
   return (
-    <Card tone="lavender" className="border-transparent">
+    <Card tone="lavender" className="border-transparent" testId="quick-check">
       <div className="mb-2 font-bold text-lavender-deep">{t("lectures.quickCheck")}</div>
       <div className="space-y-3">
         {questions.map((q, i) => (
@@ -342,7 +533,15 @@ function QuickCheck({
                     type="button"
                     key={o}
                     disabled={a !== null}
-                    onClick={() => setAnswers(answers.map((x, k) => (k === i ? j : x)))}
+                    onClick={() => {
+                      const next = answers.map((x, k) => (k === i ? j : x));
+                      setAnswers(next);
+                      if (next.every((x) => x !== null))
+                        onDone?.(
+                          next.filter((x, k) => x === questions[k]?.answer).length ===
+                            questions.length,
+                        );
+                    }}
                     className={cx(
                       "rounded-chip border px-3 py-1.5 text-sm font-medium",
                       state === "right"
@@ -361,10 +560,317 @@ function QuickCheck({
         ))}
       </div>
       {complete && (
-        <Button full className="mt-4" onClick={() => onDone?.(correct === questions.length)}>
-          {correct}/{questions.length} richtig · {t("lectures.gotIt")}
-        </Button>
+        <div className="mt-3 text-sm font-semibold text-lavender-deep">
+          {correct}/{questions.length} richtig
+        </div>
       )}
+    </Card>
+  );
+}
+
+// ---------- interactive widgets ----------
+
+function SpeakLine({ es, de }: { es: string; de?: string }) {
+  return (
+    <button
+      type="button"
+      onClick={() => speak(es)}
+      className="mt-3 w-full rounded-card bg-sage-soft px-4 py-3 text-left text-sage-deep"
+    >
+      <span className="text-lg font-semibold">
+        {es} <SpeakerHigh size={18} className="ml-1 inline" />
+      </span>
+      {de && <div className="mt-0.5 text-sm text-sage-deep/80">{de}</div>}
+    </button>
+  );
+}
+
+const OPS = [
+  { sym: "+", es: "más", de: "plus", fn: (a: number, b: number) => a + b },
+  { sym: "−", es: "menos", de: "minus", fn: (a: number, b: number) => a - b },
+  { sym: "×", es: "por", de: "mal", fn: (a: number, b: number) => a * b },
+  {
+    sym: "÷",
+    es: "entre",
+    de: "geteilt durch",
+    fn: (a: number, b: number) => (b === 0 ? Number.NaN : a / b),
+  },
+] as const;
+
+function Calculator({ intro }: { intro?: string }) {
+  const [a, setA] = useState(12);
+  const [b, setB] = useState(7);
+  const [op, setOp] = useState(0);
+  const o = OPS[op] as (typeof OPS)[number];
+  const raw = o.fn(a, b);
+  const result = Number.isFinite(raw) ? Math.round(raw * 100) / 100 : Number.NaN;
+  const es = Number.isFinite(result)
+    ? `${numberToSpanish(a)} ${o.es} ${numberToSpanish(b)} son ${numberToSpanish(result)}`
+    : "No se puede dividir entre cero";
+  const de = Number.isFinite(result)
+    ? `${a} ${o.de} ${b} ist ${result}`
+    : "Durch null kann man nicht teilen";
+  const field = (v: number, set: (n: number) => void) => (
+    <input
+      type="number"
+      value={v}
+      onChange={(e) => set(Math.max(-9999, Math.min(9999, Number(e.target.value) || 0)))}
+      className="w-24 rounded-chip border border-line bg-white px-3 py-2 text-center text-lg font-semibold outline-none focus:border-ink"
+    />
+  );
+  return (
+    <Card>
+      {intro && <div className="mb-2 text-sm text-ink-2">{intro}</div>}
+      <div className="flex flex-wrap items-center justify-center gap-2">
+        {field(a, setA)}
+        <div className="flex gap-1">
+          {OPS.map((x, i) => (
+            <Chip key={x.sym} active={op === i} onClick={() => setOp(i)}>
+              {x.sym}
+            </Chip>
+          ))}
+        </div>
+        {field(b, setB)}
+        <span className="text-lg text-ink-3">=</span>
+        <span className="min-w-12 text-center text-lg font-bold tabular-nums">
+          {Number.isFinite(result) ? result : "–"}
+        </span>
+      </div>
+      <div className="mt-2 flex flex-wrap justify-center gap-1 text-xs text-ink-3">
+        {OPS.map((x) => (
+          <span key={x.sym} className="rounded-chip bg-paper-2 px-2 py-0.5">
+            {x.sym} {x.es}
+          </span>
+        ))}
+        <span className="rounded-chip bg-paper-2 px-2 py-0.5">= son / es igual a</span>
+      </div>
+      <SpeakLine es={es} de={de} />
+      <div className="mt-2 grid grid-cols-2 gap-1 text-sm">
+        <button
+          type="button"
+          className="rounded-chip px-2 py-1 text-left hover:bg-paper-2"
+          onClick={() => speak(numberToSpanish(a))}
+        >
+          {a} · <b>{numberToSpanish(a)}</b>
+        </button>
+        <button
+          type="button"
+          className="rounded-chip px-2 py-1 text-left hover:bg-paper-2"
+          onClick={() => speak(numberToSpanish(b))}
+        >
+          {b} · <b>{numberToSpanish(b)}</b>
+        </button>
+      </div>
+    </Card>
+  );
+}
+
+function Clock({ intro }: { intro?: string }) {
+  const [h, setH] = useState(15);
+  const [m, setM] = useState(45);
+  const [drag, setDrag] = useState<"h" | "m" | null>(null);
+  const R = 100;
+  const hourAngle = ((h % 12) + m / 60) * 30;
+  const minAngle = m * 6;
+  const hand = (angle: number, len: number) => {
+    const rad = ((angle - 90) * Math.PI) / 180;
+    return { x: R + Math.cos(rad) * len, y: R + Math.sin(rad) * len };
+  };
+  const hp = hand(hourAngle, 52);
+  const mp = hand(minAngle, 78);
+  const { es, de } = timeToSpanish(h, m);
+
+  function setFromPointer(e: React.PointerEvent<SVGSVGElement>, which: "h" | "m") {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 2 * R - R;
+    const y = ((e.clientY - rect.top) / rect.height) * 2 * R - R;
+    const angle = (Math.atan2(y, x) * 180) / Math.PI + 90;
+    const a = (angle + 360) % 360;
+    if (which === "m") setM((Math.round(a / 6 / 5) * 5) % 60);
+    else {
+      const hh = Math.round(a / 30) % 12;
+      setH(h >= 12 ? hh + 12 : hh);
+    }
+  }
+  function onDown(e: React.PointerEvent<SVGSVGElement>) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 2 * R - R;
+    const y = ((e.clientY - rect.top) / rect.height) * 2 * R - R;
+    const which: "h" | "m" = Math.hypot(x, y) < 62 ? "h" : "m";
+    setDrag(which);
+    setFromPointer(e, which);
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }
+  return (
+    <Card>
+      {intro && <div className="mb-2 text-sm text-ink-2">{intro}</div>}
+      <div className="mx-auto max-w-[240px]">
+        <svg
+          viewBox={`0 0 ${2 * R} ${2 * R}`}
+          className="w-full touch-none select-none"
+          role="img"
+          aria-label="Uhr"
+          onPointerDown={onDown}
+          onPointerMove={(e) => drag && setFromPointer(e, drag)}
+          onPointerUp={() => setDrag(null)}
+          onPointerCancel={() => setDrag(null)}
+        >
+          <circle cx={R} cy={R} r={R - 2} fill="#fff" stroke="#e7e1d8" strokeWidth={3} />
+          {Array.from({ length: 12 }, (_, i) => {
+            const p = hand(i * 30, 84);
+            const q = hand(i * 30, 92);
+            return (
+              <line
+                key={`tick-${i.toString()}`}
+                x1={p.x}
+                y1={p.y}
+                x2={q.x}
+                y2={q.y}
+                stroke="#a39d94"
+                strokeWidth={i % 3 === 0 ? 3 : 1.5}
+              />
+            );
+          })}
+          {Array.from({ length: 12 }, (_, i) => {
+            const p = hand(i * 30, 70);
+            return (
+              <text
+                key={`num-${i.toString()}`}
+                x={p.x}
+                y={p.y + 4}
+                textAnchor="middle"
+                fontSize={12}
+                fill="#6b665f"
+              >
+                {i === 0 ? 12 : i}
+              </text>
+            );
+          })}
+          <line
+            x1={R}
+            y1={R}
+            x2={hp.x}
+            y2={hp.y}
+            stroke="#2b2a28"
+            strokeWidth={6}
+            strokeLinecap="round"
+          />
+          <line
+            x1={R}
+            y1={R}
+            x2={mp.x}
+            y2={mp.y}
+            stroke="#5a7a4a"
+            strokeWidth={4}
+            strokeLinecap="round"
+          />
+          <circle cx={R} cy={R} r={5} fill="#2b2a28" />
+        </svg>
+      </div>
+      <div className="mt-2 flex items-center justify-center gap-2">
+        <Chip active={h < 12} onClick={() => setH(h % 12)}>
+          vormittags
+        </Chip>
+        <Chip active={h >= 12} onClick={() => setH((h % 12) + 12)}>
+          nachmittags
+        </Chip>
+        <span className="ml-2 font-mono text-lg tabular-nums">
+          {String(h).padStart(2, "0")}:{String(m).padStart(2, "0")}
+        </span>
+      </div>
+      <SpeakLine es={es} de={de} />
+    </Card>
+  );
+}
+
+function Calendar({ intro }: { intro?: string }) {
+  const today = new Date();
+  const [year, setYear] = useState(today.getFullYear());
+  const [month, setMonth] = useState(today.getMonth());
+  const [day, setDay] = useState(today.getDate());
+  const first = new Date(year, month, 1);
+  const lead = (first.getDay() + 6) % 7;
+  const days = new Date(year, month + 1, 0).getDate();
+  const sel = new Date(year, month, Math.min(day, days));
+  const { es, de } = dateToSpanish(sel);
+  const dow = (sel.getDay() + 6) % 7;
+  const weekend = dow >= 5;
+  function shift(delta: number) {
+    const d = new Date(year, month + delta, 1);
+    setYear(d.getFullYear());
+    setMonth(d.getMonth());
+  }
+  return (
+    <Card>
+      {intro && <div className="mb-2 text-sm text-ink-2">{intro}</div>}
+      <div className="flex items-center justify-between">
+        <button
+          type="button"
+          className="rounded-chip px-3 py-1 hover:bg-paper-2"
+          onClick={() => shift(-1)}
+          aria-label="Vorheriger Monat"
+        >
+          ‹
+        </button>
+        <button type="button" className="font-bold" onClick={() => speak(MONTHS_ES[month] ?? "")}>
+          {MONTHS_ES[month]}{" "}
+          <span className="font-normal text-ink-2">
+            · {MONTHS_DE[month]} {year}
+          </span>
+        </button>
+        <button
+          type="button"
+          className="rounded-chip px-3 py-1 hover:bg-paper-2"
+          onClick={() => shift(1)}
+          aria-label="Nächster Monat"
+        >
+          ›
+        </button>
+      </div>
+      <div className="mt-2 grid grid-cols-7 gap-1 text-center text-xs text-ink-3">
+        {DAYS_ES.map((d, i) => (
+          <button
+            type="button"
+            key={d}
+            className={cx("rounded-chip py-1 hover:bg-paper-2", i >= 5 && "text-rose-deep")}
+            onClick={() => speak(d)}
+            title={DAYS_DE[i]}
+          >
+            {d.slice(0, 2)}
+          </button>
+        ))}
+        {Array.from({ length: lead }, (_, i) => (
+          <span key={`lead-${i.toString()}`} />
+        ))}
+        {Array.from({ length: days }, (_, i) => {
+          const n = i + 1;
+          const isSel = n === sel.getDate();
+          const isToday =
+            n === today.getDate() && month === today.getMonth() && year === today.getFullYear();
+          return (
+            <button
+              type="button"
+              key={`d-${n.toString()}`}
+              onClick={() => {
+                setDay(n);
+                speak(dateToSpanish(new Date(year, month, n)).es);
+              }}
+              className={cx(
+                "aspect-square rounded-chip text-sm tabular-nums",
+                isSel ? "bg-ink font-bold text-paper" : "hover:bg-paper-2",
+                !isSel && isToday && "ring-1 ring-sage",
+              )}
+            >
+              {n}
+            </button>
+          );
+        })}
+      </div>
+      <div className="mt-2 text-center text-xs text-ink-3">
+        {DAYS_ES[dow]} · {DAYS_DE[dow]} ·{" "}
+        {weekend ? "fin de semana (Wochenende)" : "día laborable (Werktag)"}
+      </div>
+      <SpeakLine es={es} de={de} />
     </Card>
   );
 }

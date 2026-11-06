@@ -44,11 +44,13 @@ export function Card({
   children,
   onClick,
   tone,
+  testId,
 }: {
   className?: string;
   children: ReactNode;
   onClick?: () => void;
   tone?: "sage" | "rose" | "lavender" | "amber" | "sky";
+  testId?: string;
 }) {
   const tones = {
     sage: "bg-sage-soft",
@@ -60,6 +62,7 @@ export function Card({
   return (
     <div
       onClick={onClick}
+      data-testid={testId}
       className={cx(
         "rounded-card border border-line bg-white/70 p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)]",
         tone && tones[tone],
@@ -272,17 +275,25 @@ export function Markdownish({ text }: { text: string }) {
             </h2>
           );
         if (!line.trim()) return null;
-        const parts = line.split(/(\*\*[^*]+\*\*)/g);
-        return (
-          <p key={key}>
-            {parts.map((p, j) =>
-              p.startsWith("**") ? (
-                <strong key={`${key}-${j}`}>{p.slice(2, -2)}</strong>
-              ) : (
-                <span key={`${key}-${j}`}>{p}</span>
-              ),
-            )}
+        const bullet = line.startsWith("- ");
+        const body = bullet ? line.slice(2) : line;
+        const parts = body.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g);
+        const inline = parts.map((p, j) =>
+          p.startsWith("**") ? (
+            <strong key={`${key}-${j}`}>{p.slice(2, -2)}</strong>
+          ) : p.startsWith("*") ? (
+            <em key={`${key}-${j}`}>{p.slice(1, -1)}</em>
+          ) : (
+            <span key={`${key}-${j}`}>{p}</span>
+          ),
+        );
+        return bullet ? (
+          <p key={key} className="flex gap-2 pl-1">
+            <span className="text-ink-3">•</span>
+            <span>{inline}</span>
           </p>
+        ) : (
+          <p key={key}>{inline}</p>
         );
       })}
     </div>

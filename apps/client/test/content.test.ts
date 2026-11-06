@@ -24,7 +24,9 @@ describe("content validates against the shared schema", () => {
       for (const b of l.blocks)
         if (b.type === "vocab_bundle")
           for (const lemma of b.lemmas)
-            expect(getEntryByLemma(lemma), `${l.slug}: ${lemma}`).toBeDefined();
+            if (typeof lemma === "string")
+              expect(getEntryByLemma(lemma), `${l.slug}: ${lemma}`).toBeDefined();
+            else expect(lemma.translation.de, `${l.slug}: ${lemma.lemma}`).toBeTruthy();
       for (const b of l.blocks)
         if (b.type === "quick_check")
           for (const q of b.questions) expect(q.answer).toBeLessThan(q.options.length);

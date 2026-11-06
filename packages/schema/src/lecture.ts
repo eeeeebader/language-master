@@ -39,11 +39,16 @@ export const RuleCardBlock = z.object({
   exceptions: z.array(z.object({ text: z.string(), translation: I18n })).default([]),
   colour: GrammarColour.default("sage"),
 });
+/** A builder option: a plain string, or a chunk with its own translation. */
+export const PatternOption = z.union([
+  z.string(),
+  z.object({ text: z.string(), translation: I18n }),
+]);
 export const PatternBuilderBlock = z.object({
   ...Base,
   type: z.literal("pattern_builder"),
   intro: I18n.optional(),
-  slots: z.array(z.object({ label: I18n, options: z.array(z.string()).min(1) })),
+  slots: z.array(z.object({ label: I18n, options: z.array(PatternOption).min(1) })),
 });
 export const ConjugationMiniBlock = z.object({
   ...Base,
@@ -71,7 +76,10 @@ export const CompareBlock = z.object({
   type: z.literal("compare"),
   left: I18n,
   right: I18n,
-  rows: z.array(z.tuple([z.string(), z.string()])),
+  /** [left, right, optional translation shown in the word drawer] */
+  rows: z.array(z.tuple([z.string(), z.string(), z.string().optional()])),
+  /** Which cells open the word drawer (the other cell, or the third item, is the translation). */
+  vocab: z.enum(["none", "left", "right", "both"]).default("none"),
 });
 export const ConstraintVisualBlock = z.object({
   ...Base,
@@ -105,7 +113,31 @@ export const VocabBundleBlock = z.object({
   ...Base,
   type: z.literal("vocab_bundle"),
   title: I18n,
-  lemmas: z.array(z.string()).min(1),
+  /** Dictionary headwords; with a translation the lecture's wording wins over the dictionary gloss. */
+  lemmas: z
+    .array(z.union([z.string(), z.object({ lemma: z.string(), translation: I18n })]))
+    .default([]),
+  /** Phrases outside the dictionary, stored as custom words */
+  phrases: z.array(z.object({ text: z.string(), translation: I18n })).default([]),
+});
+/** Tappable words with translations; each opens the word drawer. */
+export const WordListBlock = z.object({
+  ...Base,
+  type: z.literal("word_list"),
+  title: I18n.optional(),
+  words: z.array(z.object({ text: z.string(), translation: I18n, note: I18n.optional() })).min(1),
+});
+/** Interactive widgets that speak what the learner sets (numbers, clock, calendar). */
+export const CalculatorBlock = z.object({
+  ...Base,
+  type: z.literal("calculator"),
+  intro: I18n.optional(),
+});
+export const ClockBlock = z.object({ ...Base, type: z.literal("clock"), intro: I18n.optional() });
+export const CalendarBlock = z.object({
+  ...Base,
+  type: z.literal("calendar"),
+  intro: I18n.optional(),
 });
 
 export const LectureBlock = z.discriminatedUnion("type", [
@@ -121,6 +153,10 @@ export const LectureBlock = z.discriminatedUnion("type", [
   ConstraintVisualBlock,
   QuickCheckBlock,
   VocabBundleBlock,
+  WordListBlock,
+  CalculatorBlock,
+  ClockBlock,
+  CalendarBlock,
 ]);
 export type LectureBlock = z.infer<typeof LectureBlock>;
 
@@ -137,6 +173,8 @@ export const Lecture = z.object({
   /** Horizontal offset -1..1 on the path canvas */
   offset: z.number().min(-1).max(1).default(0),
   edgeHint: I18n.optional(),
+  /** Side branch: hangs off its requirement while the main path continues past it. */
+  side: z.boolean().default(false),
   blocks: z.array(LectureBlock).min(1),
 });
 export type Lecture = z.infer<typeof Lecture>;

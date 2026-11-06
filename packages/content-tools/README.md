@@ -3,7 +3,7 @@
 Clips are rendered by Piper (`docker/piper`, voice `es_ES-davefx-medium`), converted to 24 kbps mono
 Opus with ffmpeg and packed into one SQLite file keyed by the exact voiced text. Two tiers:
 
-- `core` (default): the 8,000 most frequent headwords with plurals and feminine forms, plus every
+- `core` (default): the 6,000 most frequent headwords with plurals and feminine forms, plus every
   lecture and official-story text (word forms, sentences, whole story). The app installs it for
   everyone in the background, right after the dictionary pack.
 - `full`: every headword. Offered as an opt-in download in the settings.

@@ -3,7 +3,7 @@
  *
  *   PIPER_URL=http://localhost:5000 pnpm build-audio-pack --pack dist/es-de.v2.sqlite \
  *     --lectures ../../apps/client/src/data/lectures-es.ts --stories ../../apps/client/src/data/stories-es.ts \
- *     --out dist --version 2 [--tier core|full] [--top 8000] [--limit 50] [--concurrency 4]
+ *     --out dist --version 2 [--tier core|full] [--top 6000] [--limit 50] [--concurrency 4]
  *
  * Tiers: `core` (default) voices the `--top` most frequent lemmas plus every lecture and official
  * story text, and is installed for everyone in the background; `full` voices every headword and
@@ -79,7 +79,7 @@ async function main() {
   const lecturesPath = arg("lectures");
   const storiesPath = arg("stories");
   const tier = arg("tier", "core") as "core" | "full";
-  const top = Number(arg("top", "8000"));
+  const top = Number(arg("top", "6000"));
   const out = arg("out", "dist") as string;
   const version = Number(arg("version", "1"));
   const limit = Number(arg("limit", String(Number.MAX_SAFE_INTEGER)));

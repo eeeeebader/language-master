@@ -636,13 +636,12 @@ function Session() {
               }
             />
             <div className="mt-6">
-              {stage === "front" ? (
+              {stage === "front" && (
                 <Button full size="lg" variant="secondary" onClick={reveal}>
                   {t("session.showAnswer")}
                 </Button>
-              ) : (
-                <GradeChips onPick={(g) => commit(g, null, true, null)} />
               )}
+              {stage === "revealed" && <GradeChips onPick={(g) => commit(g, null, true, null)} />}
             </div>
           </>
         )}
@@ -743,18 +742,6 @@ function Session() {
           </Card>
         )}
       </div>
-
-      {(stage !== "front" || (shown.dir ?? "t2n") === "t2n") && (
-        <div className="mt-3 flex justify-center">
-          <button
-            type="button"
-            className="inline-flex items-center gap-1 rounded-chip bg-sky-soft px-3 py-1 text-sm text-sky-deep"
-            onClick={() => speak((shown.dir ?? "t2n") === "t2n" ? shown.front : shown.back)}
-          >
-            <SpeakerHigh size={16} /> Aussprache
-          </button>
-        </div>
-      )}
 
       {(stage === "front" || stage === "revealed") && (
         <div className="mt-6 flex items-center justify-center gap-2">

@@ -17,7 +17,7 @@ test("learning keeps working without a network connection", async ({ page, conte
   await expect(page.getByText("hablar", { exact: true }).first()).toBeVisible();
 
   await page.getByRole("link", { name: "Karteikarten" }).click();
-  await page.getByRole("checkbox").first().check();
+  await page.getByText("Erste Wörter", { exact: true }).click();
   await page.getByRole("button", { name: /^Üben/ }).click();
   await expect(page).toHaveURL(/karteikarten\/practice/);
   await page.getByText("Klassisch", { exact: true }).click();

@@ -4,7 +4,7 @@ import { onboard } from "./helpers";
 test("reaction-time session infers a grade and allows a one-tap override", async ({ page }) => {
   await onboard(page);
   await page.getByRole("link", { name: "Karteikarten" }).click();
-  await page.getByRole("checkbox").first().check();
+  await page.getByText("Erste Wörter", { exact: true }).click();
   await page.getByRole("button", { name: /^Üben/ }).click();
   await expect(page).toHaveURL(/karteikarten\/practice/);
   await page.getByText("Reaktionszeit", { exact: true }).click();
@@ -23,7 +23,7 @@ test("reaction-time session infers a grade and allows a one-tap override", async
 test("progressive mode asks multiple choice first", async ({ page }) => {
   await onboard(page);
   await page.getByRole("link", { name: "Karteikarten" }).click();
-  await page.getByRole("checkbox").first().check();
+  await page.getByText("Erste Wörter", { exact: true }).click();
   await page.getByRole("button", { name: /^Üben/ }).click();
   await expect(page).toHaveURL(/karteikarten\/practice/);
   await page.getByText("Auswahl & Tippen", { exact: true }).click();

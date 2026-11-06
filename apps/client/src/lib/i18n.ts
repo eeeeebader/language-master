@@ -207,7 +207,7 @@ const de = {
   "settings.faq": "Über das Lernen",
   "settings.about": "Version {v} · offline-first",
   "onb.welcome": "Willkommen bei Language Master",
-  "onb.tagline": "Lerne spielerisch und personalisiert von null bis A2.",
+  "onb.tagline": "Lerne eine neue Sprache spielerisch und personalisiert!",
   "onb.username": "Wie sollen wir dich nennen?",
   "onb.languages": "Deine Sprachen",
   "onb.native": "Muttersprache",

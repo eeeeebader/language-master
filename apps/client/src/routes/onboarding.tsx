@@ -29,7 +29,6 @@ interface LangOption {
 const NATIVE_OPTIONS: LangOption[] = [
   { code: "de", flag: "🇩🇪", name: "Deutsch", available: true },
   { code: "en", flag: "🇬🇧", name: "English", available: false },
-  { code: "fr", flag: "🇫🇷", name: "Français", available: false },
 ];
 const STUDY_OPTIONS: LangOption[] = [
   { code: "es", flag: "🇪🇸", name: "Español", available: true },
@@ -37,6 +36,9 @@ const STUDY_OPTIONS: LangOption[] = [
   { code: "it", flag: "🇮🇹", name: "Italiano", available: false },
   { code: "pt", flag: "🇵🇹", name: "Português", available: false },
   { code: "en", flag: "🇬🇧", name: "English", available: false },
+  { code: "pl", flag: "🇵🇱", name: "Polski", available: false },
+  { code: "uk", flag: "🇺🇦", name: "Українська", available: false },
+  { code: "ja", flag: "🇯🇵", name: "日本語", available: false },
 ];
 
 function LanguagePicker<T extends string>({

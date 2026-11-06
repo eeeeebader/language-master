@@ -18,9 +18,14 @@ With the Supabase stack from `docker/` running locally, the defaults in `.env.ex
 | Method | Path | Auth | Purpose |
 | --- | --- | --- | --- |
 | GET | /health | – | liveness, migration state |
+| GET | /packs/manifest | – | newest published dictionary, core and full audio packs |
+| GET | /packs/tts?text= | – | on-demand speech through Piper (Opus when ffmpeg is present) |
+| GET | /stories/official | – | published official texts |
+| GET | /billing/me | user JWT | tier, tokens, today's free quota, prices; `field_test` flag |
+| POST | /billing/checkout | user JWT | Stripe Checkout, or an immediate grant in field-test mode |
 | POST | /sync/push | user JWT | append review events (idempotent on ulid), upsert LWW rows |
 | GET | /sync/pull?since=ISO | user JWT | rows changed after the cursor |
-| POST | /stories/generate | user JWT | quota gate → write → spaCy → notes → validate; token refunded on failure |
+| POST | /stories/generate | user JWT | quota gate → write → spaCy → notes → validate → audio clips; token refunded on failure |
 | POST | /webhooks/stripe | Stripe signature | premium, token packs, support |
 | POST | /webhooks/revenuecat | shared secret | same, for App Store / Play |
 | POST | /account/export | user JWT | DSGVO Art. 15 JSON export |
@@ -28,9 +33,16 @@ With the Supabase stack from `docker/` running locally, the defaults in `.env.ex
 
 ## Env vars
 
-See `.env.example`. The LLM provider, model ids, prompt version, prices and daily limits are
+See `.env.example`. `PIPER_URL` enables on-demand speech and story clips; the Docker image ships
+ffmpeg for Opus encoding. The LLM provider, model ids, prompt version, prices and daily limits are
 read from `app_settings` (seeded by `pnpm --filter @lm/database seed`), so changing them is a
 config change in the admin, not a release.
+
+## Field-test mode
+
+`billing.field_test = true` in `app_settings` (admin → Limits → Betrieb) makes every checkout a
+granted purchase (`admin_grant` in the ledger), reports every user as premium and supporter with
+plenty of tokens, and lifts the free-story limit. For the dry test before stores and Stripe.
 
 ## Design notes
 

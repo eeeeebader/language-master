@@ -98,7 +98,9 @@ export function storyRoutes(deps: StoriesDeps) {
     const storyId = ulid();
     const startedAt = Date.now();
     try {
-      const freePerDay = await deps.settings.get("stories.free_per_day", 1);
+      const freePerDay = (await deps.settings.get("billing.field_test", false))
+        ? 1000
+        : await deps.settings.get("stories.free_per_day", 1);
       const reservation = await reserveGeneration(deps.db, user.id, storyId, freePerDay);
       if (!reservation.ok) {
         deps.limiter.refundDaily(user.id);

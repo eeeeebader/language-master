@@ -7,7 +7,7 @@ import {
   SpeakerHigh,
   Trash,
 } from "@phosphor-icons/react";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useLiveQuery } from "dexie-react-hooks";
 import { useState } from "react";
 import { Button, Card, Chip, Page, Sheet } from "@/components/ui";

@@ -4,8 +4,9 @@ import { Hono } from "hono";
 import { z } from "zod";
 import type { Env } from "../env";
 import { log } from "../lib/log";
+import { ulid } from "../lib/ulid";
 import { checkoutParams, SUPPORT_AMOUNTS_CENTS, summarise } from "../payments/checkout";
-import { getEntitlement } from "../payments/entitlements";
+import { applyPurchase, getEntitlement } from "../payments/entitlements";
 import { createStripe } from "../payments/stripe";
 import type { SettingsStore } from "../settings";
 
@@ -22,9 +23,10 @@ export function billingRoutes(db: Db, env: Env, settings: SettingsStore) {
 
   app.get("/me", async (c) => {
     const user = c.get("user");
-    const [ent, freePerDay, used, freeStories, premiumStories, s] = await Promise.all([
+    const fieldTest = await settings.get("billing.field_test", false);
+    const [stored, freePerDay, used, freeStories, premiumStories, s] = await Promise.all([
       getEntitlement(db, user.id),
-      settings.get("stories.free_per_day", 1),
+      fieldTest ? Promise.resolve(1000) : settings.get("stories.free_per_day", 1),
       db
         .select({ n: sql<number>`count(*)::int` })
         .from(stories)
@@ -41,8 +43,19 @@ export function billingRoutes(db: Db, env: Env, settings: SettingsStore) {
       settings.get("stories.premium_archive", 50),
       settings.all(),
     ]);
+    // Field test: testers see premium, the supporter badge and plenty of tokens without paying.
+    const ent =
+      fieldTest && stored
+        ? {
+            ...stored,
+            isPremium: true,
+            isSupporter: true,
+            storyTokens: Math.max(stored.storyTokens, 999),
+          }
+        : stored;
     return c.json({
       ...summarise(ent, freePerDay, used[0]?.n ?? 0, { freeStories, premiumStories }),
+      field_test: fieldTest,
       prices: {
         premium_cents: Number(s["pricing.premium_cents"] ?? 1299),
         tokens_10_cents: Number(s["pricing.tokens_10_cents"] ?? 299),
@@ -54,8 +67,10 @@ export function billingRoutes(db: Db, env: Env, settings: SettingsStore) {
   });
 
   app.post("/checkout", async (c) => {
-    if (!env.STRIPE_SECRET_KEY) return c.json({ error: "stripe_not_configured" }, 503);
     const user = c.get("user");
+    const fieldTest = await settings.get("billing.field_test", false);
+    if (!fieldTest && !env.STRIPE_SECRET_KEY)
+      return c.json({ error: "stripe_not_configured" }, 503);
     const parsed = z
       .object({
         product: z.enum(["premium", "tokens_10", "tokens_50", "support"]),
@@ -68,8 +83,21 @@ export function billingRoutes(db: Db, env: Env, settings: SettingsStore) {
     const allowed = env.CORS_ORIGINS.split(",").map((o) => o.trim());
     if (!allowed.some((o) => return_url.startsWith(o)))
       return c.json({ error: "bad return_url" }, 400);
+    if (fieldTest) {
+      // Every purchase is "paid": grant it like an admin would, so the ledger stays consistent.
+      await applyPurchase(db, {
+        userId: user.id,
+        kind: product,
+        source: "admin_grant",
+        refId: `field_test:${ulid()}`,
+        amountCents: amount_cents,
+      });
+      log.info("field-test purchase granted", { user: user.id, product });
+      return c.json({ url: return_url, granted: true });
+    }
     if (product === "premium" && (await getEntitlement(db, user.id))?.isPremium)
       return c.json({ error: "already_premium" }, 409);
+    if (!env.STRIPE_SECRET_KEY) return c.json({ error: "stripe_not_configured" }, 503);
     try {
       const params = checkoutParams({
         product,

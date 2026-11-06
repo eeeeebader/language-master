@@ -155,6 +155,13 @@ export const mock = {
       updated_at: "2026-11-01T09:00:00Z",
     },
     {
+      key: "billing.field_test",
+      value_json: false as unknown,
+      version: 1,
+      updated_by: "admin",
+      updated_at: "2026-11-01T09:00:00Z",
+    },
+    {
       key: "maintenance",
       value_json: false as unknown,
       version: 1,

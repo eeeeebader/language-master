@@ -16,7 +16,9 @@
     "db:migrate": "pnpm --filter @lm/api migrate",
     "content:validate": "pnpm --filter @lm/content-tools validate-lectures",
     "content:pack": "pnpm --filter @lm/content-tools build-pack",
-    "content:audio": "pnpm --filter @lm/content-tools render-audio"
+    "content:audio": "pnpm --filter @lm/content-tools render-audio",
+    "content:refine": "pnpm --filter @lm/content-tools refine-pack",
+    "content:audio-pack": "pnpm --filter @lm/content-tools build-audio-pack"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.5",

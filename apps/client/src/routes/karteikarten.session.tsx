@@ -31,7 +31,6 @@ import { db } from "@/db/db";
 import { bumpActivity, getSettings, overrideReview, recordReview } from "@/db/repo";
 import * as haptics from "@/lib/haptics";
 import { t } from "@/lib/i18n";
-import { maybeAskPermission, rescheduleNotifications } from "@/lib/notifications";
 import { buildSession, type Direction, type Focus, newCardsSeenToday } from "@/lib/session-builder";
 import { play } from "@/lib/sound";
 import { track } from "@/lib/telemetry";

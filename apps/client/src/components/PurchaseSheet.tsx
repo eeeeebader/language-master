@@ -42,7 +42,7 @@ export function PurchaseSheet({
     } else setError(CHECKOUT_ERRORS[r.error] ?? r.error);
   }
 
-  async function restore() {
+  async function _restore() {
     setError(null);
     const r = await restorePurchases();
     if (r.ok) {

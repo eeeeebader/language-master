@@ -17,7 +17,8 @@ decisions that shape the build; the full document is the reference for scope, le
 - Payments: RevenueCat (Apple/Google IAP) on mobile, Stripe + Stripe Tax on web; support payments web-only.
 - Users confirm they are 16 or older; under-16s are refused; no exact age is stored.
 - Light mode only. Warm paper background with five pastel accents that double as grammar colours.
-- Native language German only in v1; everything localisable. POC study language: Spanish.
+- Native languages German and English (English content later); study language Spanish first,
+  the admin can prepare pairs for fr, it, pt, en, pl, uk, ja. Everything localisable.
 
 ## Tiers
 
@@ -46,13 +47,15 @@ session skip the word for today. One-tap override rewrites the review.
 Modes: 1 classic (manual), 2 reaction-time (auto + override), 3 progressive choice → typing
 (auto), 4 Learn Forever (due queue, then new at a daily rate; auto + override).
 
-## Roadmap (phases)
+## Roadmap (phases, revised 6 Nov 2026)
 
-1. Karteikarten loop + dictionary (beta of 20 people) ← v0.1 covers the local half of this
-2. Lectures
-3. Supabase auth, sync, retention jobs, admin basics (Users, Limits, Legal, Jobs)
-4. Story pipeline, tokens, payments
-5. Native builds, notifications, store release
+1. Karteikarten, dictionary, lectures, audio, admin — done and reviewed (v0.3)
+2. Login with email (SMTP), user tag
+3. Stories review round
+4. Profile sync on two devices
+5. Small social: friends by tag, progress, shared lists and stories
+6. Android APK, then deploy for the field test with `billing.field_test` instead of payments
+7. After the dry test: RevenueCat, Stripe, store listings
 
 ## Open decisions
 

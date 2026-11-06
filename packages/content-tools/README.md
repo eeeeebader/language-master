@@ -21,6 +21,17 @@ The audio packs share the dictionary pack's version; the manifest endpoint repor
 (core) and `audio_full_url` (full) when published. Texts no pack covers are rendered on demand by
 the API (`GET /packs/tts`) and cached on the device; generated stories ship with their own clips.
 
+## Refining a published pack without the sources
+
+```bash
+pnpm refine-pack --pack dist/es-de.v3.sqlite --out dist --version 4 \
+  --seed ../../apps/client/src/data/dictionary-es.ts --lectures ../../apps/client/src/data/lectures-es.ts
+```
+
+Copies the pack, puts the curated glosses (seed dictionary, lecture vocab translations, optional
+`--overrides file.json`) first in `sense`, keeps the Wiktionary glosses after them, rebuilds the
+gloss rows of the search index and writes the manifest for the new version.
+
 ## Dictionary pack build (two Wiktionary extracts)
 
 The English-Wiktionary Spanish extract has no German translations, so a Spanish→German pack is

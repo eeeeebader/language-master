@@ -91,6 +91,11 @@ const META: Record<
     hint: "Monatlich enthalten",
     group: "Preise",
   },
+  "billing.field_test": {
+    label: "Feldtest-Modus",
+    hint: "Jeder Kauf gilt als bezahlt; alle Nutzer sind Premium und Supporter mit freien Geschichten. Nur für den Dry-Test.",
+    group: "Betrieb",
+  },
   maintenance: {
     label: "Wartungsmodus",
     hint: "App zeigt Hinweis, Generierung aus",

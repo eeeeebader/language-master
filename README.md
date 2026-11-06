@@ -6,96 +6,31 @@ colour-coded grammar. German native language, Spanish study language (v1).
 
 The full product and technical plan lives in `docs/plan.md`.
 
-## Status: v0.2 (client POC + full infrastructure scaffold)
+## Status: v0.3 (learner surface reviewed, backend scaffolded, not yet deployed)
 
 The client runs 100 % on the device and stays in local-only mode until the Supabase and API env
-vars are set (`apps/client/.env.example`). With them set it signs in by magic link and syncs the
-append-only review log through the API. The whole server side from the plan is scaffolded and
-validated (typecheck, tests, compose config) but not yet deployed or exercised against a live
-Supabase stack.
+vars are set (`apps/client/.env.example`). The server side is complete as code and tested, and
+has run against a local Supabase stack, but has never been deployed. Reviewed means the area has
+been through a hands-on review round with real content and is considered finished for the field
+test; everything else is listed with its gap.
 
-What works:
+| Area | State | Notes |
+| --- | --- | --- |
+| Onboarding | reviewed | name, native (de; en soon), study language (es; fr/it/pt/en/pl/uk/ja soon), consent, starter list, tour |
+| Home | reviewed | streak, daily minutes from reviews + lectures + stories, next lecture, inbox, auto-speak mute |
+| Karteikarten | reviewed | lists with level chips, practice setup (4 modes, direction, sample, focus, overview), ladder modes, grading panel, summary with word drawer |
+| Wörterbuch | reviewed | pack v4 (46 731 headwords, curated glosses first), worker search, entry pages, add-to-list |
+| Lektionen | reviewed | 15 lectures + optional branch, word drawer everywhere, "Lektionen" list, calculator/clock/calendar widgets |
+| Audio | reviewed | core Opus pack installs in the background, full pack opt-in, on-demand Piper, story clips, auto-speak setting |
+| Admin | reviewed | users (tier, supporter, free stories, tokens), languages with native parents, typed settings, content, legal, ops |
+| Geschichten | **in progress** | reader and pipeline work; generation screen states, archive by tier and a quality loop are open; not yet reviewed like the areas above |
+| Login & sync | **not reviewed** | magic link and sync routes exist; never exercised end to end against a live stack |
+| Payments | **field-test mode only** | `billing.field_test` grants every purchase; Stripe/RevenueCat wiring exists but is untested |
+| Social | **not started** | user tag, friends, shared lists and stories: design in `docs/review-2026-11-06.md` |
+| Native builds | **not started** | Capacitor projects committed, no signed build yet |
 
-- **Onboarding**: username → languages → "16 or older" + AGB/Datenschutz consent → guided starter
-  session on a system list of survival words → skippable tab tour.
-- **Home**: streak (learning days, vacation, one-tap reactivation), due cards, continue story,
-  next lecture, mastered words, words read in stories, daily minutes, 12-week velocity chart.
-- **Karteikarten**: lists (system + custom), one canonical word per lemma, card variants
-  (lemma / article / plural / conjugation / gender pair / custom), session assembly across lists
-  with due / failed / new filters, random sampling and direction, and all four modes:
-  classic, reaction-time, progressive (choice → typing) and Learn Forever. Reaction-time grading
-  with self-calibrating base, per-word response profiles (EMA), one-tap override via superseding
-  events, 5/10-minute retry loops, the 10-card cognitive-load cap and skip-after-three-Agains.
-- **Dictionary**: a downloadable Spanish–German pack (WikDict translations, German-Wiktionary
-  glosses, English-Wiktionary morphology, subtitle frequency ranks, curated A1 overrides; ~46 700
-  lemmas plus ~4 000 inflected forms, 21.6 MB) checked
-  against a manifest on launch, stored on the device and queried with sql.js; the bundled ~140-entry
-  seed is the fallback. Prefix + fuzzy + accent-insensitive search; variant picker on every form;
-  custom entries. An optional audio pack (Piper voice, MP3, ~4 600 clips for headwords, forms and
-  lecture texts, 24 MB) is downloaded from settings and played before the device's TTS.
-- **Lectures**: Spanish unit 0 as twelve nodes on an SVG path, rendered from the typed block schema
-  (alphabet grid, number table, rule cards, pattern builder, conjugation mini, dialogue, compare,
-  constraint visual, quick check, vocab bundle). Soft locks; "Got it" or the quick check marks a node done.
-- **Stories**: two official texts rendered by the generic reader: five-colour grammar spans with
-  cross-sentence references, word drawer (contextual + literal gloss, grammar note, sentence, add to
-  list with the story sentence as context), coverage bar, post-story vocabulary summary with bulk-add
-  and "test story vocabulary" (Mode 3). The generation controls are built; generation itself needs
-  the API and is disabled.
-- **Profile / settings**: avatar, member since, language stats, activity calendar, sound, haptics,
-  daily new cards, streak settings, FAQ, legal drafts, JSON export, delete everything.
-
-Server side and tooling (v0.2, scaffolded):
-
-- **apps/api**: Hono on Node 22. Sync push/pull, story pipeline (quota gate → LLM writer →
-  spaCy annotate → LLM grammar notes → Zod validation, tolerant checks, one retry, refund),
-  Stripe and RevenueCat webhooks → entitlements, account export/delete, nightly retention cron,
-  migrations with advisory lock. Golden tests with a recorded fake LLM.
-- **packages/database**: Drizzle schema for every table in the plan, hand-written initial
-  migration, RLS policies, app_settings seed.
-- **apps/nlp**: FastAPI + spaCy `es_core_news_md`, `/annotate` in the StoryToken shape.
-- **apps/admin**: back office (Users, Limits, Legal, Changelog, Jobs, Audit, Content: lectures with
-  live preview, dictionary, official stories, Languages, Finance, Analytics, Flags) with a mock mode
-  when no Supabase env is set. Its README defines the `/admin/*` API contract the API still has to implement.
-- **apps/site**: Astro marketing site + VitePress docs (architecture, offline data model, pipeline,
-  packs, lectures, admin, legal).
-- **packages/ui**, **packages/i18n**, **packages/content-tools**: design tokens and pure lecture
-  components; i18next catalog with a CI key check; Kaikki → SQLite pack builder (FTS5, `node:sqlite`),
-  dict client, lecture validator, Piper audio renderer.
-- **infra/ + docker/**: official self-hosted Supabase (pinned), Traefik v3 stack for api/nlp/piper/
-  static sites/listmonk, key generator, backup/restore and pull-deploy scripts with systemd timers.
-- **.github/workflows**: CI (lint, typecheck, test, build, NLP tests, compose checks), GHCR image
-  release on main, Capacitor mobile builds on tags (gated on secrets).
-
-- **Notifications**: a pure planner in `packages/srs` (streak deadline minus one hour, study
-  reminders skipped on practised days, weekly summary recomputed from local data, due-card
-  projection, free story, lecture nudge, quiet hours) scheduled through Capacitor local
-  notifications on iOS/Android; the settings page edits every type and previews the plan. The
-  OS permission is requested after the first finished session. An in-app inbox shows changelog,
-  legal updates and announcements with an unread badge on Home.
-
-- **Versioned consent**: the API serves the current legal texts and records consents per
-  (user, document, version); a new AGB or Datenschutz version published with the re-consent flag
-  blocks the signed-in app until accepted, the onboarding consent is carried over when versions
-  match, and the legal pages show the served version.
-
-- **Observability**: Sentry (EU DSN) in client, admin and API with source maps uploaded on CI
-  builds, and PostHog Cloud EU product analytics with typed events (`packages/schema/src/events.ts`),
-  pseudonymous ids, no session recording and an in-app opt-out. All inert without keys.
-
-- **Web offline**: a service worker precaches the whole bundle (routes, SQLite wasm), so the web
-  app reloads and navigates offline; packs and audio live in IndexedDB.
-- **Playwright smoke tests** (`pnpm --filter @lm/client e2e`, against the built bundle in
-  local-only mode): onboarding and starter session, dashboard, dictionary search and add-to-list,
-  reaction-time and progressive sessions, lecture with quick check, reader drawer and vocabulary
-  summary, and an offline reload plus session. Run in CI.
-
-- **Operations in the admin**: the "Betrieb" module shows service health, API process stats
-  (uptime, requests by status, sync latency percentiles), story success rate and LLM cost per day,
-  client-reported pack download failures, recent API errors and job runs, all from the database and
-  the API itself. No separate monitoring stack.
-
-Still open: store configuration (RevenueCat products, signing), store releases, and an external
-uptime check with alerting.
+See `docs/review-2026-11-06.md` for the detailed review and the roadmap, and
+`docs/developer-guide.md` for how the pieces fit together when developing.
 
 ## Repo layout
 
@@ -113,7 +48,7 @@ packages/i18n        i18next catalogs (de) + key check
 packages/content-tools  dictionary pack builder, dict client, lecture validator, audio renderer
 docker/              Traefik stack for everything that is not Supabase
 infra/               self-hosted Supabase, scripts (keys, backup, deploy), systemd units
-docs/                plan summary and infrastructure docs
+docs/                plan summary, developer guide, infrastructure docs, status review
 ```
 
 ## Develop
@@ -126,6 +61,9 @@ pnpm dev:api      # API (needs DATABASE_URL etc., see apps/api/.env.example)
 pnpm dev:site
 pnpm test         # vitest in all packages + i18n key check
 pnpm --filter @lm/client e2e   # Playwright smoke tests (builds and previews the client)
+pnpm content:validate          # lecture JSON against the schema and the pack
+pnpm content:refine            # curated glosses on top of an existing dictionary pack
+pnpm content:audio-pack        # core or full audio pack through Piper (needs ffmpeg)
 pnpm typecheck
 pnpm lint         # biome
 pnpm build

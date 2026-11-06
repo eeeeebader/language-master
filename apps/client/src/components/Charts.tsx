@@ -1,5 +1,4 @@
 import { addDays, daysBetween, toLocalDay, weekdayOf } from "@lm/srs";
-import { cx } from "./ui";
 
 /**
  * Activity calendar: 14 past weeks and 2 future weeks, Monday-first rows. Days before the account

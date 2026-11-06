@@ -23,6 +23,8 @@ export interface Billing {
     support_cents: number[];
   };
   stripe_enabled: boolean;
+  /** Server is in field-test mode: every purchase is granted without payment. */
+  field_test?: boolean;
 }
 
 export type Product = "premium" | "tokens_10" | "tokens_50" | "support";

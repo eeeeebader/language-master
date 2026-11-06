@@ -109,10 +109,16 @@ export function Block({
       return <Markdownish text={block.markdown.de ?? ""} />;
     case "alphabet_grid":
       return <AlphabetGrid letters={block.letters} onWord={onWord} />;
-    case "number_table":
+    case "number_table": {
+      const long = block.rows.some((r) => r.word.length > 12);
       return (
         <Card>
-          <div className="grid grid-cols-2 gap-1 sm:grid-cols-3">
+          <div
+            className={cx(
+              "grid gap-1",
+              long ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-2 sm:grid-cols-3",
+            )}
+          >
             {block.rows.map((r) => (
               <button
                 type="button"
@@ -128,34 +134,41 @@ export function Block({
               </button>
             ))}
           </div>
-          {block.patternNote && <p className="mt-3 text-sm text-ink-2">{block.patternNote.de}</p>}
+          {block.patternNote && (
+            <div className="mt-3 text-sm text-ink-2">
+              <Markdownish text={block.patternNote.de ?? ""} />
+            </div>
+          )}
         </Card>
       );
-    case "word_list":
+    }
+    case "word_list": {
+      const compact = block.words.every((x) => x.text.length <= 12 && !x.note);
       return (
         <Card>
           {block.title && <div className="mb-2 font-bold">{block.title.de}</div>}
-          <div className="grid gap-1 sm:grid-cols-2">
-            {block.words.map((w) => (
+          <div className={cx("grid gap-1", compact && "sm:grid-cols-2")}>
+            {block.words.map((x) => (
               <button
                 type="button"
-                key={w.text}
-                className="flex items-baseline justify-between gap-3 rounded-chip px-3 py-1.5 text-left hover:bg-paper-2"
+                key={x.text}
+                className="rounded-chip px-3 py-1.5 text-left hover:bg-paper-2"
                 onClick={() => {
-                  speak(w.text);
-                  onWord?.({ text: w.text, translation: w.translation.de });
+                  speak(x.text);
+                  onWord?.({ text: x.text, translation: x.translation.de });
                 }}
               >
-                <span>
-                  <span className="font-semibold">{w.text}</span>
-                  {w.note && <span className="ml-1 text-xs text-ink-3">{w.note.de}</span>}
-                </span>
-                <span className="text-sm text-ink-2">{w.translation.de}</span>
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="font-semibold">{x.text}</span>
+                  <span className="shrink-0 text-right text-sm text-ink-2">{x.translation.de}</span>
+                </div>
+                {x.note && <div className="text-xs text-ink-3">{x.note.de}</div>}
               </button>
             ))}
           </div>
         </Card>
       );
+    }
     case "rule_card":
       return (
         <Card className={cx("border-transparent", COLOUR_BG[block.colour])}>

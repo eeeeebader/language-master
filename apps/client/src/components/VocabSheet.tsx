@@ -1,6 +1,6 @@
 import type { DictionaryEntry, WordSentence } from "@lm/schema";
 import { normaliseAnswer } from "@lm/srs";
-import { BookOpenText, Plus, SpeakerHigh } from "@phosphor-icons/react";
+import { ListBullets, Plus, SpeakerHigh } from "@phosphor-icons/react";
 import { useNavigate } from "@tanstack/react-router";
 import { useLiveQuery } from "dexie-react-hooks";
 import { useState } from "react";
@@ -44,6 +44,13 @@ export function VocabSheet({ item, onClose }: { item: VocabItem | null; onClose:
           : [],
       [word?.id],
     ) ?? [];
+  const lists =
+    useLiveQuery(async () => {
+      if (!word) return [];
+      const lw = await db.listWords.where("wordId").equals(word.id).toArray();
+      const ls = await db.lists.bulkGet(lw.map((x) => x.listId));
+      return ls.filter((l): l is NonNullable<typeof l> => !!l && !l.deletedAt);
+    }, [word?.id]) ?? [];
   const [pick, setPick] = useState(false);
   const [customList, setCustomList] = useState<string | null>(null);
   const [addingCustom, setAddingCustom] = useState(false);
@@ -177,31 +184,35 @@ export function VocabSheet({ item, onClose }: { item: VocabItem | null; onClose:
               </Card>
             )}
 
-            {(entry || word) && (
-              <div className="flex gap-2 pt-1">
-                {word && (
-                  <button
-                    type="button"
-                    className="flex-1 rounded-chip bg-paper-2 px-3 py-2 text-sm font-medium"
-                    onClick={() =>
-                      navigate({ to: "/karteikarten/words/$wordId", params: { wordId: word.id } })
-                    }
-                  >
-                    {t("cards.wordPage")}
-                  </button>
-                )}
-                {entry && (
-                  <button
-                    type="button"
-                    className="flex flex-1 items-center justify-center gap-1 rounded-chip bg-sky-soft px-3 py-2 text-sm font-medium text-sky-deep"
-                    onClick={() =>
-                      navigate({ to: "/dictionary/$entryId", params: { entryId: entry.id } })
-                    }
-                  >
-                    <BookOpenText size={16} /> {t("cards.inDictionary")}
-                  </button>
-                )}
-              </div>
+            {lists.length > 0 && (
+              <Section title={t("cards.inLists")}>
+                <div className="flex flex-wrap gap-1.5">
+                  {lists.map((l) => (
+                    <button
+                      type="button"
+                      key={l.id}
+                      className="inline-flex items-center gap-1 rounded-chip bg-lavender-soft px-2.5 py-1 text-sm text-lavender-deep"
+                      onClick={() =>
+                        navigate({ to: "/karteikarten/lists/$listId", params: { listId: l.id } })
+                      }
+                    >
+                      <ListBullets size={14} /> {l.title}
+                    </button>
+                  ))}
+                </div>
+              </Section>
+            )}
+
+            {word && (
+              <button
+                type="button"
+                className="w-full rounded-chip bg-paper-2 px-3 py-2 text-sm font-medium"
+                onClick={() =>
+                  navigate({ to: "/karteikarten/words/$wordId", params: { wordId: word.id } })
+                }
+              >
+                {t("cards.wordPage")}
+              </button>
             )}
           </div>
         )}

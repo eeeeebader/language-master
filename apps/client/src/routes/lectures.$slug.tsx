@@ -1,7 +1,7 @@
 import { ArrowLeft } from "@phosphor-icons/react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useLiveQuery } from "dexie-react-hooks";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Block } from "@/components/LectureBlocks";
 import { ListPicker } from "@/components/ListPicker";
 import { Button, Page, Sheet } from "@/components/ui";
@@ -16,8 +16,10 @@ import {
   ensureWord,
   markLectureDone,
 } from "@/db/repo";
+import { useReadingTime } from "@/hooks/useReadingTime";
 import { getEntryByLemma, variantOptions } from "@/lib/dictionary";
 import { t } from "@/lib/i18n";
+import { OPEN_LECTURE_KEY } from "@/lib/lectures";
 import { play } from "@/lib/sound";
 import { track } from "@/lib/telemetry";
 
@@ -42,6 +44,10 @@ function LectureView() {
   const [listId, setListId] = useState<string | null>(null);
   const [word, setWord] = useState<VocabItem | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  useReadingTime();
+  useEffect(() => {
+    if (lecture) sessionStorage.setItem(OPEN_LECTURE_KEY, lecture.slug);
+  }, [lecture]);
   // Words earlier lectures already offered stay out of this lecture's bundles.
   const hidden = useMemo(() => {
     const s = new Set<string>();
@@ -56,6 +62,7 @@ function LectureView() {
     await markLectureDone(lecture.id);
     track("lecture_done", { lecture: lecture.slug });
     play("levelup");
+    sessionStorage.removeItem(OPEN_LECTURE_KEY);
     navigate({ to: "/lectures" });
   }
 
@@ -106,7 +113,11 @@ function LectureView() {
     <Page
       title={lecture.title.de}
       back={
-        <Link to="/lectures" className="rounded-full p-2 hover:bg-paper-2">
+        <Link
+          to="/lectures"
+          className="rounded-full p-2 hover:bg-paper-2"
+          onClick={() => sessionStorage.removeItem(OPEN_LECTURE_KEY)}
+        >
           <ArrowLeft size={22} />
         </Link>
       }

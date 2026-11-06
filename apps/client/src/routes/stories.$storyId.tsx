@@ -5,7 +5,7 @@ import {
   sentenceText,
   storyText,
 } from "@lm/schema";
-import { normaliseAnswer, toLocalDay } from "@lm/srs";
+import { normaliseAnswer } from "@lm/srs";
 import { ArrowLeft, Plus, SpeakerHigh, Stop } from "@phosphor-icons/react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useLiveQuery } from "dexie-react-hooks";
@@ -14,14 +14,8 @@ import { ListPicker } from "@/components/ListPicker";
 import { Button, Card, Chip, cx, Page, ProgressBar, Sheet } from "@/components/ui";
 import { VariantPicker } from "@/components/VariantPicker";
 import { db } from "@/db/db";
-import {
-  addSentence,
-  addToList,
-  bumpActivity,
-  ensureVariant,
-  ensureWord,
-  markStoryFinished,
-} from "@/db/repo";
+import { addSentence, addToList, ensureVariant, ensureWord, markStoryFinished } from "@/db/repo";
+import { useReadingTime } from "@/hooks/useReadingTime";
 import { computeCoverage, storyLemmas } from "@/lib/coverage";
 import { getEntryByLemma, searchDictionary } from "@/lib/dictionary";
 import { t } from "@/lib/i18n";
@@ -70,27 +64,7 @@ function Reader() {
   }
   useEffect(() => () => stopSpeaking(), []);
 
-  // Reading time counts towards the daily minutes (flushed every minute and on leave).
-  useEffect(() => {
-    let since = performance.now();
-    const flush = () => {
-      const ms = performance.now() - since;
-      since = performance.now();
-      if (ms > 5_000)
-        bumpActivity(toLocalDay(new Date()), { minutes: Math.round((ms / 60_000) * 10) / 10 });
-    };
-    const iv = setInterval(flush, 60_000);
-    const onVis = () => {
-      if (document.visibilityState === "hidden") flush();
-      else since = performance.now();
-    };
-    document.addEventListener("visibilitychange", onVis);
-    return () => {
-      clearInterval(iv);
-      document.removeEventListener("visibilitychange", onVis);
-      flush();
-    };
-  }, []);
+  useReadingTime();
 
   const knownLemmas = useMemo(
     () => new Set(words.filter((w) => !w.deletedAt).map((w) => normaliseAnswer(w.lemma))),

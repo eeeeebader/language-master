@@ -89,6 +89,8 @@ const de = {
   "cards.inDictionary": "Im Wörterbuch",
   "cards.wordPage": "Zum Wort",
   "cards.word": "Wort",
+  "cards.inLists": "In deinen Listen",
+  "list.search": "In der Liste suchen …",
   "cards.removeFromList": "Aus Liste entfernen",
   "session.dontKnow": "Weiß ich nicht",
   "session.back": "Zurück",
@@ -162,7 +164,8 @@ const de = {
   "dict.chooseList": "Liste wählen",
   "dict.added": "Hinzugefügt",
   "lectures.title": "Lektionen",
-  "lectures.subtitle": "Kurze Referenzkarten – lies sie, wenn du sie brauchst.",
+  "lectures.subtitle":
+    "Die Lektionen geben dir einen kurzen Überblick über die Sprache in verdaulichen Schritten. Jede Lektion dauert etwa 5–10 Minuten. Du lernst nicht nur die Sprachregeln, sondern auch gleich ein kleines Vokabular zum Starten!",
   "lectures.gotIt": "Verstanden",
   "lectures.quickCheck": "Kurzer Check",
   "lectures.locked": "Baut auf früheren Lektionen auf",

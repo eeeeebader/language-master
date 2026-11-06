@@ -82,7 +82,9 @@ export function useStreak() {
       .map((l) => ({ from: l.from as string, to: l.to as string }));
     return computeStreak({
       activityDays: new Set(
-        activity.filter((a) => a.reviews + a.lecturesDone + a.storiesRead > 0).map((a) => a.day),
+        activity
+          .filter((a) => a.reviews + a.lecturesDone + a.storiesRead > 0 || a.minutes >= 3)
+          .map((a) => a.day),
       ),
       learningDays: settings?.learningDays ?? [1, 2, 3, 4, 5],
       vacations,

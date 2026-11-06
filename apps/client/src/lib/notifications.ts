@@ -84,7 +84,9 @@ export async function buildPlan(now = new Date()): Promise<PlannedNotification[]
     weeklySummary(),
   ]);
   const learnedDays = new Set(
-    activity.filter((a) => a.reviews + a.lecturesDone + a.storiesRead > 0).map((a) => a.day),
+    activity
+      .filter((a) => a.reviews + a.lecturesDone + a.storiesRead > 0 || a.minutes >= 3)
+      .map((a) => a.day),
   );
   const lastLecture = doneLectures.sort((a, b) => b.doneAt.localeCompare(a.doneAt))[0];
   const next = LECTURES_ES.find((l) => !doneLectures.some((d) => d.lectureId === l.id));

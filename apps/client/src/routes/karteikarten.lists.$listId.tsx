@@ -1,4 +1,5 @@
 import type { DictionaryEntry } from "@lm/schema";
+import { normaliseAnswer } from "@lm/srs";
 import {
   ArrowLeft,
   CaretRight,
@@ -132,6 +133,7 @@ function ListDetail() {
     await softDeleteList(list.id);
     navigate({ to: "/karteikarten" });
   }
+  const [query, setQuery] = useState("");
   const rows = useLiveQuery(async () => {
     const lw = (await db.listWords.where("listId").equals(listId).toArray()).sort(
       (a, b) => a.position - b.position,
@@ -230,42 +232,60 @@ function ListDetail() {
       }
     >
       {list?.description && <p className="mb-3 text-ink-2">{list.description}</p>}
+      {rows && rows.length > 5 && (
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={t("list.search")}
+          className="mb-3 w-full rounded-chip border border-line bg-white px-4 py-2 outline-none focus:border-ink"
+        />
+      )}
       {rows && rows.length === 0 && <Empty>{t("cards.empty")}</Empty>}
       <div className="grid gap-2">
-        {rows?.map(({ w, variants, rating, retention }) => (
-          <Card
-            key={w.id}
-            className="flex items-center gap-3"
-            onClick={() =>
-              navigate({ to: "/karteikarten/words/$wordId", params: { wordId: w.id } })
-            }
-          >
-            <div className="min-w-0 flex-1">
-              <div className="font-bold">
-                {w.lemma} <span className="font-normal text-ink-2">· {w.translation}</span>
+        {rows
+          ?.filter(({ w, variants }) => {
+            const q = normaliseAnswer(query);
+            if (!q) return true;
+            return (
+              normaliseAnswer(w.lemma).includes(q) ||
+              normaliseAnswer(w.translation).includes(q) ||
+              variants.some((v) => normaliseAnswer(v.front).includes(q))
+            );
+          })
+          .map(({ w, variants, rating, retention }) => (
+            <Card
+              key={w.id}
+              className="flex items-center gap-3"
+              onClick={() =>
+                navigate({ to: "/karteikarten/words/$wordId", params: { wordId: w.id } })
+              }
+            >
+              <div className="min-w-0 flex-1">
+                <div className="font-bold">
+                  {w.lemma} <span className="font-normal text-ink-2">· {w.translation}</span>
+                </div>
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {variants.map((v) => (
+                    <span
+                      key={v.id}
+                      className="rounded-chip bg-paper-2 px-2 py-0.5 text-xs text-ink-2"
+                    >
+                      {v.front}
+                    </span>
+                  ))}
+                </div>
               </div>
-              <div className="mt-1 flex flex-wrap gap-1">
-                {variants.map((v) => (
-                  <span
-                    key={v.id}
-                    className="rounded-chip bg-paper-2 px-2 py-0.5 text-xs text-ink-2"
-                  >
-                    {v.front}
-                  </span>
-                ))}
+              <div className="text-right">
+                <Chip tone={RATING_TONE[rating]} className="text-xs">
+                  {t(`cards.rating.${rating}` as "cards.rating.new")}
+                </Chip>
+                {retention !== null && (
+                  <div className="mt-1 text-[11px] text-ink-3">{Math.round(retention * 100)} %</div>
+                )}
               </div>
-            </div>
-            <div className="text-right">
-              <Chip tone={RATING_TONE[rating]} className="text-xs">
-                {t(`cards.rating.${rating}` as "cards.rating.new")}
-              </Chip>
-              {retention !== null && (
-                <div className="mt-1 text-[11px] text-ink-3">{Math.round(retention * 100)} %</div>
-              )}
-            </div>
-            <CaretRight className="text-ink-3" />
-          </Card>
-        ))}
+              <CaretRight className="text-ink-3" />
+            </Card>
+          ))}
         <button
           type="button"
           className="flex items-center justify-center gap-2 rounded-card border border-dashed border-line px-4 py-3 text-ink-2 hover:bg-white"

@@ -1,6 +1,7 @@
 import { Lock } from "@phosphor-icons/react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useLiveQuery } from "dexie-react-hooks";
+import { useEffect, useRef } from "react";
 import { cx, Page } from "@/components/ui";
 import { LECTURES_ES } from "@/data/lectures-es";
 import { db } from "@/db/db";
@@ -23,6 +24,12 @@ function Lectures() {
     (useLiveQuery(() => db.lectureProgress.toArray(), []) ?? []).map((d) => d.lectureId),
   );
   const navigate = useNavigate();
+  const progress = useLiveQuery(() => db.lectureProgress.toArray(), []);
+  const currentRef = useRef<SVGGElement>(null);
+  // Open the path at the next lecture to do, so the learner never scrolls past done nodes.
+  useEffect(() => {
+    if (progress) currentRef.current?.scrollIntoView({ block: "center" });
+  }, [progress]);
   const nodes = LECTURES_ES.map((l, i) => {
     const cy = 60 + i * STEP;
     const w = l.side ? SIDE_W : NODE_W;
@@ -31,6 +38,7 @@ function Lectures() {
     return { l, w, x: cx - w / 2, y: cy - NODE_H / 2, cx, cy, locked, isDone: done.has(l.id) };
   });
   const main = nodes.filter((n) => !n.l.side);
+  const current = nodes.find((n) => !n.isDone && !n.locked && !n.l.side) ?? nodes[0];
   const byId = new Map(nodes.map((n) => [n.l.id, n]));
   const height = 60 + nodes.length * STEP;
 
@@ -71,6 +79,7 @@ function Lectures() {
         {nodes.map((n) => (
           <g
             key={n.l.id}
+            ref={n === current ? currentRef : undefined}
             className={cx("cursor-pointer", n.locked && "opacity-70")}
             onClick={() => navigate({ to: "/lectures/$slug", params: { slug: n.l.slug } })}
           >
@@ -95,10 +104,9 @@ function Lectures() {
               {n.l.title.de.length > 24 ? `${n.l.title.de.slice(0, 23)}…` : n.l.title.de}
             </text>
             <text x={n.x + 16} y={n.y + 52} fontSize={11} fill="#6b665f">
-              {n.l.summary.de.length > (n.l.side ? 20 : 28)
-                ? `${n.l.summary.de.slice(0, n.l.side ? 18 : 26)}…`
-                : n.l.summary.de}{" "}
-              · {n.l.minutes} min
+              {n.l.summary.de.length > (n.l.side ? 24 : 34)
+                ? `${n.l.summary.de.slice(0, n.l.side ? 22 : 32)}…`
+                : n.l.summary.de}
             </text>
             {n.l.side && (
               <text x={n.x + 16} y={n.y + 70} fontSize={10} fill="#a39d94">

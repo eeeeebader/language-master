@@ -1259,15 +1259,16 @@ export const LECTURES_ES: Lecture[] = [
       },
       {
         id: "ca3",
-        type: "compare",
-        left: de("Werktage"),
-        right: de("Wochenende"),
-        rows: [
-          ["lunes, martes, miércoles, jueves, viernes", "sábado y domingo"],
-          ["un día laborable", "el fin de semana", "ein Werktag / das Wochenende"],
-          ["entre semana", "el sábado por la mañana", "unter der Woche / am Samstagvormittag"],
+        type: "word_list",
+        title: de("Werktag und Wochenende"),
+        words: [
+          w("un día laborable", "ein Werktag", "lunes – viernes"),
+          w("entre semana", "unter der Woche"),
+          w("el fin de semana", "das Wochenende", "sábado y domingo"),
+          w("el sábado por la mañana", "am Samstagvormittag"),
+          w("el domingo por la tarde", "am Sonntagnachmittag"),
+          w("los días festivos", "die Feiertage"),
         ],
-        vocab: "none",
       },
       {
         id: "ca4",

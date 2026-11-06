@@ -54,7 +54,7 @@ export function createApp(db: Db, env: Env, state: AppState) {
 
   app.route("/health", healthRoutes(db, state));
   app.route("/webhooks", webhookRoutes(db, env));
-  app.route("/packs", packRoutes(db));
+  app.route("/packs", packRoutes(db, env.PIPER_URL));
   app.route("/legal", legalRoutes(db));
 
   app.route("/stories", officialStoryRoutes(db));

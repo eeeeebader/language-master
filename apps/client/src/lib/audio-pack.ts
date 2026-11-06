@@ -5,7 +5,8 @@
 import { audioKey, type PackManifest } from "@lm/content-tools";
 import initSqlJs, { type SqlJsStatic } from "sql.js";
 import sqlWasmUrl from "sql.js/dist/sql-wasm.wasm?url";
-import { db } from "@/db/db";
+import { type AudioClipRow, db } from "@/db/db";
+import { API_URL } from "./auth";
 import { fetchManifest, reportPackFailure } from "./dict-pack";
 
 export type AudioState =
@@ -120,13 +121,26 @@ export async function removeAudio(): Promise<void> {
 
 const urlCache = new Map<string, string>();
 
+/** Texts outside the pack are rendered by the server once and kept locally like pack clips. */
+async function fetchClip(key: string): Promise<AudioClipRow | null> {
+  if (!API_URL || !navigator.onLine) return null;
+  const res = await fetch(`${API_URL}/packs/tts?text=${encodeURIComponent(key)}`).catch(() => null);
+  if (!res?.ok) return null;
+  const row: AudioClipRow = {
+    key,
+    mime: res.headers.get("content-type") ?? "audio/wav",
+    bytes: new Uint8Array(await res.arrayBuffer()),
+  };
+  await db.audioClips.put(row).catch(() => undefined);
+  return row;
+}
+
 /** Play a stored clip for this text; resolves false when none exists. */
 export async function playClip(text: string): Promise<boolean> {
-  if (state.status !== "ready") return false;
   const key = audioKey(text);
   let url = urlCache.get(key);
   if (!url) {
-    const row = await db.audioClips.get(key);
+    const row = (await db.audioClips.get(key)) ?? (await fetchClip(key));
     if (!row) return false;
     url = URL.createObjectURL(new Blob([row.bytes as BlobPart], { type: row.mime }));
     urlCache.set(key, url);

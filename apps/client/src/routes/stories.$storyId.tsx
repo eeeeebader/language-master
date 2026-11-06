@@ -330,7 +330,15 @@ function Reader() {
                         {tk.ws}
                       </span>
                     );
-                  })}{" "}
+                  })}
+                  <button
+                    type="button"
+                    aria-label="Satz anhören"
+                    onClick={() => speak(sentenceText(s))}
+                    className="mx-1 inline-flex h-6 w-6 translate-y-0.5 items-center justify-center rounded-full bg-sky-soft text-sky-deep align-baseline"
+                  >
+                    <SpeakerHigh size={13} />
+                  </button>{" "}
                 </span>
               );
             })}
